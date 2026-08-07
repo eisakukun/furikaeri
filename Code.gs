@@ -20,9 +20,10 @@
 // カテゴリ → Googleカレンダーの色
 function colorFor(cat) {
   var m = {
-    '仕事':               CalendarApp.EventColor.CYAN,
-    '好きな仕事':          CalendarApp.EventColor.GREEN,
+    '仕事':               CalendarApp.EventColor.RED,
+    '撮影編集':            CalendarApp.EventColor.GREEN,
     '研究・プログラミング': CalendarApp.EventColor.MAUVE,
+    '3Dプリンター工作':    CalendarApp.EventColor.CYAN,
     'ダンス':             CalendarApp.EventColor.PALE_RED,
     '出会い':             CalendarApp.EventColor.ORANGE,
     '人と会う・イベント':   CalendarApp.EventColor.YELLOW,
