@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a1024"/>
+      <stop offset="1" stop-color="#05060e"/>
+    </linearGradient>
+    <filter id="g"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="192" height="192" rx="40" fill="url(#bg)"/>
+  <rect x="10" y="10" width="172" height="172" rx="34" fill="none" stroke="#00f0ff" stroke-width="3" opacity="0.8"/>
+  <!-- 過去をふりかえる矢印(反時計回り) + チェック -->
+  <g filter="url(#g)" fill="none" stroke="#00f0ff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M128 62 A44 44 0 1 0 140 96"/>
+    <path d="M128 44 L128 66 L106 66"/>
+  </g>
+  <g filter="url(#g)" fill="none" stroke="#ff2e97" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M74 98 L90 116 L124 78"/>
+  </g>
+</svg>
