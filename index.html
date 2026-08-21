@@ -218,6 +218,26 @@
   .pal button i{display:block; width:22px; height:22px; box-shadow:0 0 8px currentColor}
   .pal button.on{border-color:var(--cyan); box-shadow:var(--glow)}
   .pal button:disabled{opacity:.28; cursor:not-allowed}
+  /* 名寄せ（同じことに何時間） */
+  .segs{display:flex; gap:6px; margin-bottom:11px}
+  .segs button{flex:1; padding:9px 4px; background:var(--panel2); border:1px solid var(--line); color:var(--dim); font-size:12px; font-weight:800; cursor:pointer; font-family:inherit}
+  .segs button.on{border-color:var(--cyan); color:var(--cyan); box-shadow:var(--glow); background:transparent}
+  .grp{border-top:1px solid rgba(36,58,99,.5); padding:9px 2px}
+  .grp .gh{display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px}
+  .grp .gh .gnm{flex:1; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .grp .gh .gc{font:10px "Courier New",monospace; color:var(--dim); flex:none}
+  .grp .gh .gt{font-family:"Courier New",monospace; font-weight:900; color:var(--cyan); flex:none; width:56px; text-align:right}
+  .grp .gbar{height:6px; background:#0a1024; border:1px solid var(--line); margin-top:6px; overflow:hidden}
+  .grp .gbar i{display:block; height:100%; box-shadow:0 0 7px currentColor}
+  .grp .gdet{margin-top:8px; padding:8px 10px; background:#0a1024; border-left:2px solid var(--line); font-size:11px; color:var(--dim); line-height:1.8}
+  .grp .gdet .t{color:var(--text)}
+  .grp .gdet button{margin-top:7px; background:transparent; border:1px solid rgba(255,46,151,.5); color:var(--mag); font-size:11px; padding:5px 10px; cursor:pointer; font-family:inherit}
+  .grp .ai{flex:none; font-size:10px; color:#b14bff; text-shadow:0 0 6px rgba(177,75,255,.7)}
+  .aibtn{width:100%; padding:13px; margin-top:12px; background:transparent; border:1px solid #b14bff; color:#b14bff; font-weight:800; cursor:pointer; font-family:inherit; box-shadow:0 0 10px rgba(177,75,255,.25)}
+  .aibtn:disabled{opacity:.5; cursor:wait}
+  .cyc{display:grid; grid-template-columns:repeat(4,1fr); gap:7px}
+  .cyc button{height:46px; background:var(--panel2); border:1px solid var(--line); color:var(--text); font-weight:800; font-size:14px; cursor:pointer; font-family:inherit}
+  .cyc button.on{border-color:var(--cyan); color:var(--cyan); box-shadow:var(--glow); background:transparent}
   .startrow{display:flex; align-items:center; gap:9px}
   .startrow input[type=date]{flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:11px; font-size:15px; font-family:inherit; min-height:44px}
   .prorate{font:11px "Courier New",monospace; color:#f9f002; margin-top:6px}
@@ -283,30 +303,42 @@
 <div id="viewWk" class="hide">
   <button class="calendar-sync" id="calendarSyncBtn" onclick="importCalendarRecords(true)">⟳ Googleカレンダーから更新</button>
   <div class="wknav">
-    <button onclick="moveWeek(-1)">‹</button>
-    <div class="wklabel" id="wkLabel"></div>
-    <button id="wkNext" onclick="moveWeek(1)">›</button>
+    <button onclick="moveView(-1)">‹</button>
+    <div class="wklabel" id="vwLabel"></div>
+    <button id="vwNext" onclick="moveView(1)">›</button>
   </div>
   <div class="card">
-    <span class="lbl">📊 この週の信号（実績 / 枠。白い破線が枠のライン）</span>
+    <span class="lbl">📊 このサイクルの信号（実績 / 枠。白い破線が枠のライン）</span>
     <div id="totals"></div>
-    <div class="prorate hide" id="wkProrate"></div>
-    <div class="ckmsg" id="wkMsg"></div>
+    <div class="prorate hide" id="vwPos"></div>
+    <div class="ckmsg" id="vwMsg"></div>
   </div>
   <div class="card">
-    <span class="lbl">🗓️ この週の記録</span>
+    <span class="lbl">🔎 同じことに、のべ何時間つかった？</span>
+    <div class="segs" id="mgSegs">
+      <button onclick="setMgRange('cycle')">このサイクル</button>
+      <button onclick="setMgRange('30')">直近30日</button>
+      <button onclick="setMgRange('all')">ぜんぶ</button>
+    </div>
+    <div id="mgList"></div>
+    <button class="aibtn" id="aiBtn" onclick="aiMerge()">🔮 表記ゆれをAIでまとめる</button>
+    <div class="hint" id="mgHint"></div>
+  </div>
+
+  <div class="card">
+    <span class="lbl">🗓️ このサイクルの記録</span>
     <div id="days"></div>
   </div>
   <div class="card">
     <span class="lbl">💭 どう感じましたか？（任意）</span>
-    <textarea id="feel" placeholder="この一週間、どうだった？" oninput="saveFeel()"></textarea>
+    <textarea id="feel" placeholder="この3日、どうだった？" oninput="saveFeel()"></textarea>
   </div>
 </div>
 
 <!-- 設定 -->
 <div id="viewGoal" class="hide">
   <div class="card">
-    <span class="lbl">1週間に使える総枠（起きて何かに使う時間）</span>
+    <span class="lbl"><span id="budLbl">3日</span>で使える総枠（起きて何かに使う時間）</span>
     <div class="budrow">
       <button onclick="bumpBudget(-5)">−</button>
       <div class="budval" id="budVal">70h</div>
@@ -315,10 +347,13 @@
     <div class="stack" id="budStack"></div>
     <div class="freeline" id="budFree"></div>
     <div class="hint">ここが有限だから「取り合い」になる。総枠を大きくしても1日は伸びないので、実感に近い数字にしておくのがコツ。</div>
+    <div class="lbl" style="margin-top:14px">1サイクルの長さ</div>
+    <div class="cyc" id="cycPick"></div>
+    <div class="hint">意識が届く範囲だけを1区切りにする。<b>だらけた区切りがあっても、次は勝手に始まります</b>（連続記録も罰もなし）。</div>
   </div>
 
   <div class="card">
-    <span class="lbl">カテゴリごとの週の枠（＝ここまでは使っていい上限）</span>
+    <span class="lbl">種類ごとの<span id="goalLbl">3日</span>の枠（＝ここまでは使っていい上限）</span>
     <div id="goalRows"></div>
     <div class="hint">これは「やれ」じゃなくて「ここまでなら他を潰さない」ライン。<br>
       実績が枠の8割で🟡＝ここから先は他の枠を削り始める。枠を超えたら🔴＝もう削ってる。</div>
@@ -335,14 +370,14 @@
   <div class="card">
     <span class="lbl">答え合わせのスタート日</span>
     <div class="startrow"><input type="date" id="startDate" onchange="setStartDate(this.value)"></div>
-    <div class="hint">この日より前の期間には答え合わせが出ません。<br>
-      スタート週は、残り日数ぶんに枠を割った額で判定します（週の途中から始めても赤くならない）。</div>
+    <div class="hint">この日が<b>サイクル#1の初日</b>になります。ここから3日ずつ機械的に区切るので、曜日は関係ありません。<br>
+      これより前の期間には答え合わせが出ません。</div>
   </div>
 
   <div class="card">
     <span class="lbl">答え合わせの履歴</span>
     <div class="cklist" id="ckList"></div>
-    <div class="hint">週を <b>前半3日（日月火）</b> と <b>後半4日（水木金土）</b> に割って答え合わせ。さらに1週間、1ヶ月。<br>期間が終わってから初めて出てくる（未来には出ない）。</div>
+    <div class="hint">サイクルが終わるたびに1通、あと月末に1通。<br>終わってから初めて出てくる（未来には出ない）。<b>飛ばしたサイクルがあっても、次はふつうに来ます。</b></div>
   </div>
 </div>
 
@@ -412,16 +447,25 @@ function load(){ try{ const o=JSON.parse(localStorage.getItem(KEY)); if(o&&o.rec
 function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 let state=load();
 /* ===== 目標＝週の「枠」。ノルマではなく予算。 ===== */
-const DEFAULT_GOALS={'仕事':20,'撮影編集':6,'研究・プログラミング':12,'3Dプリンター工作':4,'ダンス':6,'出会い':3,'人と会う・イベント':4,'生活・その他':10};
+/* 枠の単位は「1サイクル(既定3日)あたり」。意識が届く範囲がそこまでだから。 */
+const DEFAULT_GOALS={'仕事':9,'撮影編集':2,'研究・プログラミング':6,'3Dプリンター工作':1,'ダンス':3.5,'出会い':1.5,'人と会う・イベント':2,'生活・その他':3};
 if(!Array.isArray(state.cats)||!state.cats.length)state.cats=JSON.parse(JSON.stringify(DEFAULT_CATS));
 state.cats.forEach((c,i)=>{ if(!c.g)c.g=(PALETTE[i]||PALETTE[PALETTE.length-1]).g;
   const pl=PALETTE.find(p=>p.g===c.g); if(pl)c.c=pl.c; });
 CATS=state.cats;
 if(!state.goals)state.goals={};
-if(typeof state.budget!=='number')state.budget=70;
+if(typeof state.budget!=='number')state.budget=30;
+if(typeof state.cycleDays!=='number')state.cycleDays=3;
 if(!state.checks)state.checks={};
 /* 答え合わせを始める日。過去の記録を掘り返して未読を大量発生させない。 */
 if(!state.startDate)state.startDate=todayStr0();
+/* 旧バージョンの「週あたり」の数字を「サイクルあたり」に換算（一度だけ） */
+if(!state.unitCycle){
+  const f=state.cycleDays/7;
+  if(state.budget>40)state.budget=Math.round(state.budget*f);
+  Object.keys(state.goals||{}).forEach(k=>state.goals[k]=Math.round(state.goals[k]*f*2)/2);
+  state.unitCycle=1;
+}
 CATS.forEach(c=>{ if(typeof state.goals[c.n]!=='number')state.goals[c.n]=DEFAULT_GOALS[c.n]||0; });
 // 疎通確認用イベントは実際の記録・集計には含めない。
 const beforeTestCleanup=state.records.length;
@@ -433,7 +477,6 @@ const pad=n=>String(n).padStart(2,'0');
 const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const todayStr=()=>iso(new Date());
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-function startOfWeek(d){ return addDays(d,-((d.getDay()+6)%7)); } // 月曜始まり
 const DOW=['日','月','火','水','木','金','土'];
 
 /* ============ 記録タブ ============ */
@@ -655,7 +698,7 @@ function finishEditRecorded(i){
     if(rec){ rec.startH=p.startH; rec.endH=p.endH; rec.hours=p.endH-p.startH; rec.start=fmtH(p.startH); rec.end=fmtH(p.endH); rec.synced=false; save(); syncOne(rec); }
   }
   editingRecordedIndex=-1; renderDrafts(); renderTL(); updateUnsync();
-  if(!document.getElementById('viewWk').classList.contains('hide'))renderWeek();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
   toast('時間を更新した');
 }
 function deleteRecordedDraft(i){
@@ -666,7 +709,7 @@ function deleteRecordedDraft(i){
   if(editingRecordedIndex===i)editingRecordedIndex=-1; else if(editingRecordedIndex>i)editingRecordedIndex--;
   if(selectedPendingIndex===i)selectedPendingIndex=-1; else if(selectedPendingIndex>i)selectedPendingIndex--;
   renderDrafts(); renderTL();
-  if(!document.getElementById('viewWk').classList.contains('hide'))renderWeek();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
   toast('記録を削除した');
 }
 
@@ -731,40 +774,41 @@ async function importCalendarRecords(showMessage){
     });
     state.records.sort((a,b)=>(a.ts||0)-(b.ts||0)); save(); updateUnsync();
     renderHUD(); updateCkBanner(); renderCkList();
-    if(!document.getElementById('viewWk').classList.contains('hide'))renderWeek();
+    if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
     if(showMessage)toast(added?`${added}件をカレンダーから復元した`:`カレンダーと同期済み（${updated}件）`);
   }catch(e){ if(showMessage)toast('読み込みできません。GASを再デプロイしてね'); }
   finally{ if(b){ b.disabled=false; b.textContent='⟳ Googleカレンダーから更新'; } }
 }
 
 /* ============ ふりかえりタブ ============ */
-let wkStart=startOfWeek(new Date());
-function moveWeek(n){
-  const nx=addDays(wkStart,7*n);
-  if(iso(nx)>todayStr()){ toast('未来はまだ無いよ'); return; }   // 未来にカレンダーは置かない
-  wkStart=nx; renderWeek();
+let viewStart=0;   // サイクル番号
+function moveView(n){
+  const nx=viewStart+n;
+  if(cycleFrom(nx)>todayStr()){ toast('未来はまだ無いよ'); return; }   // 未来にカレンダーは置かない
+  viewStart=nx; renderView();
 }
-function weekKey(){ return 'w:'+iso(wkStart); }
-function renderWeek(){
-  const we=addDays(wkStart,6);
-  document.getElementById('wkLabel').textContent=`${iso(wkStart).slice(5)} 〜 ${iso(we).slice(5)}`;
-  const from=iso(wkStart), to=iso(we);
+function viewKey(){ return 'c:'+cycleFrom(viewStart); }
+function renderView(){
+  const from=cycleFrom(viewStart), to=cycleTo(viewStart), n=CD();
+  document.getElementById('vwLabel').textContent=`#${viewStart+1}　${fmtD(from)} 〜 ${fmtD(to)}`;
   const recs=state.records.filter(r=>r.date>=from && r.date<=to);
   // カテゴリ合計（重複カウントOK）
   const tot={}; CATS.forEach(c=>tot[c.n]=0);
   recs.forEach(r=>r.cats.forEach(c=>{ tot[c]=(tot[c]||0)+r.hours; }));
-  const wc=weekCaps(wkStart), caps=wc.caps;
+  const caps={}; CATS.forEach(c=>caps[c.n]=goalOf(c.n));
   document.getElementById('totals').innerHTML=renderTotals(tot,caps);
-  const pr=document.getElementById('wkProrate');
-  pr.classList.toggle('hide',wc.days>=7);
-  pr.textContent=wc.days<7?`※ スタート日の週なので、枠は残り${wc.days}日ぶん（週の枠 × ${wc.days}/7）で見てるよ`:'';
+  const pr=document.getElementById('vwPos'), td=todayStr();
+  const live=(td>=from&&td<=to);
+  pr.classList.remove('hide');
+  pr.textContent = live ? `いま ${dayDiff(from,td)+1}日目 / ${n}日　（残り ${n-dayDiff(from,td)-1}日）` : `終わったサイクル（${n}日ぶん）`;
   const cm=conflictMsg(tot,caps);
-  document.getElementById('wkMsg').className='ckmsg '+cm.cls;
-  document.getElementById('wkMsg').innerHTML=cm.html;
+  document.getElementById('vwMsg').className='ckmsg '+cm.cls;
+  document.getElementById('vwMsg').innerHTML=cm.html;
   // 日ごと
   const d=document.getElementById('days'); let html='';
-  for(let i=0;i<7;i++){
-    const day=addDays(wkStart,i), ds=iso(day);
+  for(let i=0;i<n;i++){
+    const day=addDays(new Date(from+'T00:00:00'),i), ds=iso(day);
+    if(ds>todayStr())break;                       // 未来の日は置かない
     const dr=recs.filter(r=>r.date===ds).sort((a,b)=>a.ts-b.ts);
     html+=`<div class="day"><div class="dh">${ds.slice(5)}（${DOW[day.getDay()]}）</div>`;
     if(!dr.length) html+='<div class="rec" style="color:var(--dim)">—</div>';
@@ -797,8 +841,9 @@ function renderWeek(){
     html+='</div>';
   }
   d.innerHTML=html;
-  document.getElementById('feel').value=state.feels[weekKey()]||'';
-  document.getElementById('wkNext').disabled = iso(addDays(wkStart,7))>todayStr();
+  document.getElementById('feel').value=state.feels[viewKey()]||'';
+  renderMerge();
+  document.getElementById('vwNext').disabled = cycleFrom(viewStart+1)>todayStr();
 }
 function removeRecordById(id){
   const rec=state.records.find(r=>r.id===id); if(!rec)return null;
@@ -809,9 +854,9 @@ function removeRecordById(id){
 }
 function delRec(id){
   if(!confirm('この記録を端末とGoogleカレンダーから消す？'))return;
-  removeRecordById(id); renderWeek();
+  removeRecordById(id); renderView();
 }
-function saveFeel(){ state.feels[weekKey()]=document.getElementById('feel').value; save(); }
+function saveFeel(){ state.feels[viewKey()]=document.getElementById('feel').value; save(); }
 
 /* ============ 共通 ============ */
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
@@ -823,7 +868,7 @@ function switchTab(t){
   document.getElementById('tabRec').classList.toggle('active',t==='rec');
   document.getElementById('tabWk').classList.toggle('active',t==='wk');
   document.getElementById('tabGoal').classList.toggle('active',t==='goal');
-  if(t==='wk'){ wkStart=startOfWeek(new Date()); renderWeek(); }
+  if(t==='wk'){ viewStart=cycleIndex(todayStr()); renderView(); }
   if(t==='goal'){ renderGoal(); }
   renderHUD();
 }
@@ -846,14 +891,20 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ==================================================================
-   めやす（週の枠）・信号・答え合わせ
+   めやす（1サイクルの枠）・信号・答え合わせ
    考え方：週に使える時間は有限。カテゴリの目標は「取り分」であって
    ノルマではない。使いすぎ＝他のやりたいことの枠を食っている。
    ================================================================== */
+const CD=()=>state.cycleDays||3;
+function dayDiff(a,b){ return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000); }
+/* startDate から CD 日ごとに区切る。だらけても勝手に次が始まる（連続を要求しない）。 */
+function cycleIndex(ds){ return Math.floor(dayDiff(state.startDate,ds)/CD()); }
+function cycleFrom(i){ return iso(addDays(new Date(state.startDate+'T00:00:00'), i*CD())); }
+function cycleTo(i){ return iso(addDays(new Date(state.startDate+'T00:00:00'), i*CD()+CD()-1)); }
 function goalOf(n){ return Number(state.goals[n])||0; }
 function goalSum(){ return CATS.reduce((a,c)=>a+goalOf(c.n),0); }
 /* 期間の長さ（日数）に応じた枠 */
-function capsFor(days){ const o={}; CATS.forEach(c=>o[c.n]=goalOf(c.n)*days/7); return o; }
+function capsFor(days){ const o={}; CATS.forEach(c=>o[c.n]=goalOf(c.n)*days/CD()); return o; }
 /* 信号：l=まだ余裕/未設定, g=順調, y=枠の8割（ここから他を削る）, r=枠超え */
 function sigOf(a,g){ if(g<=0)return a>0?'l':'l'; const r=a/g; return r>1?'r':(r>=0.8?'y':(r>=0.25?'g':'l')); }
 
@@ -914,16 +965,17 @@ function conflictMsg(tot,caps){
 /* ---------- HUD（今日どれだけ進んだか） ---------- */
 function renderHUD(){
   const el=document.getElementById('hud'); if(!el)return;
-  const t=todayStr();
-  const ws=startOfWeek(new Date());
-  const wk=sumRange(iso(ws),iso(addDays(ws,6)));
+  const t=todayStr(), ci=cycleIndex(t), from=cycleFrom(ci), to=cycleTo(ci);
+  const wk=sumRange(from,to);
   const td=sumRange(t,t);
-  const caps=weekCaps(ws).caps;
+  const caps={}; CATS.forEach(c=>caps[c.n]=goalOf(c.n));
   const lamps=CATS.filter(c=>goalOf(c.n)>0).map(c=>{
     const sg=sigOf(wk.tot[c.n]||0,caps[c.n]);
     return `<span class="sig ${sg}" title="${c.n} ${(wk.tot[c.n]||0).toFixed(1)}h / ${caps[c.n].toFixed(0)}h"></span>`;
   }).join('');
-  el.innerHTML=`今日 <span class="hv">${td.total.toFixed(1)}h</span>　今週 <span class="hv">${wk.total.toFixed(1)}h</span> / ${state.budget}h　<span style="color:var(--dim)">手数 ${wk.count}</span><span class="lamps">${lamps}</span>`;
+  el.innerHTML=`今日 <span class="hv">${td.total.toFixed(1)}h</span>　`
+    +`このサイクル(${dayDiff(from,t)+1}/${CD()}日) <span class="hv">${wk.total.toFixed(1)}h</span> / ${state.budget}h`
+    +`<span class="lamps">${lamps}</span>`;
 }
 
 /* ---------- めやすタブ ---------- */
@@ -931,7 +983,7 @@ function bumpBudget(n){ state.budget=Math.max(10,Math.min(140,state.budget+n)); 
 function bumpGoal(n,d){
   state.goals[n]=Math.max(0,Math.round((goalOf(n)+d)*2)/2);
   save(); renderGoal(); renderHUD();
-  if(!document.getElementById('viewWk').classList.contains('hide'))renderWeek();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
 }
 function renderGoal(){
   document.getElementById('budVal').textContent=state.budget+'h';
@@ -953,34 +1005,31 @@ function renderGoal(){
       <div class="gv" style="color:${g>0?c.c:'var(--dim)'}">${g.toFixed(1)}</div>
       <button onclick="bumpGoal('${c.n}',0.5)">＋</button></div>`;
   }).join('');
+  document.getElementById('budLbl').textContent=CD()+'日';
+  document.getElementById('goalLbl').textContent=CD()+'日';
+  document.getElementById('cycPick').innerHTML=[2,3,4,7].map(n=>
+    `<button class="${n===CD()?'on':''}" onclick="askCycle(${n})">${n}日</button>`).join('');
   renderCatRows();
   document.getElementById('startDate').value=state.startDate||todayStr();
   renderCkList();
 }
 
 /* ---------- 答え合わせ（チェックポイント） ---------- */
-const CK_LABEL={segA:'前半3日（月火水）',segB:'後半4日（木金土日）',week:'1週間',month:'1ヶ月'};
+const CK_LABEL={cycle:'サイクル',month:'1ヶ月'};
 function firstRecDate(){ let m=null; state.records.forEach(r=>{ if(!m||r.date<m)m=r.date; }); return m; }
 function fmtD(ds){ const d=new Date(ds+'T00:00:00'); return ds.slice(5).replace('-','/')+'('+DOW[d.getDay()]+')'; }
 function allChecks(){
-  const out=[]; let fr=firstRecDate(); if(!fr)return out;
-  if(state.startDate&&state.startDate>fr)fr=state.startDate;   // スタート日より前は掘り返さない
-  const today=todayStr();
-  let ws=startOfWeek(new Date(fr+'T00:00:00')),guard=0;
-  while(iso(ws)<=today&&guard++<400){
-    const a0=iso(ws);
-    if(iso(addDays(ws,3))<=today&&a0>=fr)out.push({id:'A'+a0,kind:'segA',from:a0,to:iso(addDays(ws,2)),days:3});
-    if(iso(addDays(ws,7))<=today&&a0>=fr){
-      out.push({id:'B'+a0,kind:'segB',from:iso(addDays(ws,3)),to:iso(addDays(ws,6)),days:4});
-      out.push({id:'W'+a0,kind:'week',from:a0,to:iso(addDays(ws,6)),days:7});
-    }
-    ws=addDays(ws,7);
-  }
-  let d=new Date(fr.slice(0,7)+'-01T00:00:00');
-  for(let i=0;i<80;i++){
-    const y=d.getFullYear(),m=d.getMonth(),last=new Date(y,m+1,0);
-    if(iso(last)>=today)break;
-    if(iso(d)>=fr)out.push({id:'M'+iso(d).slice(0,7),kind:'month',from:iso(d),to:iso(last),days:last.getDate()});
+  const out=[]; if(!state.startDate)return out;
+  const today=todayStr(), last=cycleIndex(today);
+  // 終わったサイクルだけ（今やってる最中のは出さない＝未来を置かない）
+  for(let i=Math.max(0,last-40);i<last;i++)
+    out.push({id:'C'+cycleFrom(i),kind:'cycle',no:i+1,from:cycleFrom(i),to:cycleTo(i),days:CD()});
+  let d=new Date(state.startDate.slice(0,7)+'-01T00:00:00');
+  for(let i=0;i<40;i++){
+    const y=d.getFullYear(),m=d.getMonth(),lastd=new Date(y,m+1,0);
+    if(iso(lastd)>=today)break;
+    if(iso(lastd)>=state.startDate)
+      out.push({id:'M'+iso(d).slice(0,7),kind:'month',from:iso(d),to:iso(lastd),days:lastd.getDate()});
     d=new Date(y,m+1,1);
   }
   out.sort((a,b)=>a.to<b.to?1:(a.to>b.to?-1:0));   // 新しい順
@@ -993,9 +1042,10 @@ function updateCkBanner(){
   if(!pend.length){ el.classList.add('hide'); return; }
   const c=pend[0];
   el.classList.remove('hide');
-  el.innerHTML=`▶ 答え合わせが届いてる：<span style="color:var(--text)">${CK_LABEL[c.kind]}（${fmtD(c.from)}〜${fmtD(c.to)}）</span>`
+  el.innerHTML=`▶ 答え合わせが届いてる：<span style="color:var(--text)">${ckName(c)}（${fmtD(c.from)}〜${fmtD(c.to)}）</span>`
     +(pend.length>1?`<span class="n">${pend.length}</span>`:'');
 }
+function ckName(c){ return c.kind==='cycle'?`サイクル #${c.no}（${c.days}日）`:'1ヶ月'; }
 let curCk=null;
 function openNextCk(){ const p=pendingChecks(); if(p.length)openCk(p[0].id); }
 function openCk(id){
@@ -1006,9 +1056,9 @@ function openCk(id){
   const msg=conflictMsg(tot,caps);
   const saved=state.checks[c.id];
   document.getElementById('ckBody').innerHTML=`
-    <div class="ckhead"><div class="ckkind">答え合わせ ／ ${CK_LABEL[c.kind]}</div>
+    <div class="ckhead"><div class="ckkind">答え合わせ ／ ${ckName(c)}</div>
       <div class="ckrange">${fmtD(c.from)} 〜 ${fmtD(c.to)}　${c.days}日間</div></div>
-    <div class="ckstat">合計 ${total.toFixed(1)}h ／ 記録した日 ${days}/${c.days}日 ／ ${count}件　（この期間の枠＝週の枠 × ${c.days}/7）</div>
+    <div class="ckstat">合計 ${total.toFixed(1)}h ／ 記録した日 ${days}/${c.days}日 ／ ${count}件　（枠＝1サイクルの枠 × ${c.days}/${CD()}）</div>
     ${renderTotals(tot,caps)}
     <div class="ckmsg ${msg.cls}">${msg.html}</div>
     <textarea id="ckNote" placeholder="気づいたこと（空でもOK）">${esc(saved&&saved.note||'')}</textarea>
@@ -1032,7 +1082,7 @@ function renderCkList(){
   el.innerHTML=all.map(c=>{
     const done=!!state.checks[c.id];
     return `<div class="cki${done?' done':''}" onclick="openCk('${c.id}')">
-      <div class="k">${CK_LABEL[c.kind]}</div>
+      <div class="k">${ckName(c)}</div>
       <div class="d">${fmtD(c.from)} 〜 ${fmtD(c.to)}</div>
       <div class="go">${done?'済':'▶ 開く'}</div></div>`;
   }).join('');
@@ -1059,7 +1109,7 @@ function renderCatRows(){
 }
 function commitCats(){
   CATS=state.cats; save(); renderCatRows(); renderGoal(); renderCats(); renderHUD();
-  if(!document.getElementById('viewWk').classList.contains('hide'))renderWeek();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
 }
 function setCatIcon(i,v){ state.cats[i].i=(v||'').trim(); commitCats(); }
 function renameCat(i,v){
@@ -1109,17 +1159,151 @@ function pickPal(g){
 function setStartDate(v){
   if(!v)return; state.startDate=v; save();
   updateCkBanner(); renderCkList(); renderHUD();
-  if(!document.getElementById('viewWk').classList.contains('hide'))renderWeek();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
   toast(v.slice(5).replace('-','/')+' から数えるよ');
 }
-/* スタート週は残り日数ぶんに枠を割る（週の途中から始めても赤くならない） */
-function weekCaps(ws){
-  const we=addDays(ws,6), sd=state.startDate;
-  let d=7;
-  if(sd&&sd>iso(ws)&&sd<=iso(we))
-    d=Math.round((new Date(iso(we)+'T00:00:00')-new Date(sd+'T00:00:00'))/86400000)+1;
-  const o={}; CATS.forEach(c=>o[c.n]=goalOf(c.n)*d/7);
-  return {caps:o,days:d};
+function askCycle(n){
+  if(n===CD())return;
+  if(!confirm(n+'日サイクルに変える？\n枠の数字も自動で割り直します。済んだ答え合わせは区切りが変わるのでリセットされます。'))return;
+  setCycleDays(n);
+}
+function setCycleDays(n){
+  n=Math.max(1,Math.min(7,Number(n)||3));
+  const f=n/CD();
+  state.budget=Math.round(state.budget*f*10)/10;
+  Object.keys(state.goals).forEach(k=>state.goals[k]=Math.round(state.goals[k]*f*2)/2);
+  state.cycleDays=n; state.checks={}; save();
+  viewStart=cycleIndex(todayStr()); renderGoal(); renderView(); renderHUD(); updateCkBanner();
+  toast(n+'日サイクルにした（枠も割り直したよ）');
+}
+
+/* ==================================================================
+   名寄せ：「マチアプ ビビちゃん」と「マッチングアプリ ビビ」を
+   同じものとして合計する。文字列処理では届かないのでGeminiに聞く。
+   一度まとめた対応は state.aliases に残るので、次からAI無しで効く。
+   ================================================================== */
+if(!state.aliases)state.aliases={};
+let mgRange='30';
+function norm(t){
+  return (t||'').normalize('NFKC').toLowerCase()
+    .replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60))  // カタカナ→ひらがな
+    .replace(/[\s　\-–—_/／・,、。.!！?？()（）\[\]「」【】"'`~^:;]/g,'')
+    .trim();
+}
+function mgFromTo(){
+  if(mgRange==='cycle')return [cycleFrom(viewStart),cycleTo(viewStart)];
+  if(mgRange==='30')return [iso(addDays(new Date(),-29)),todayStr()];
+  return ['0000-01-01','9999-12-31'];
+}
+function buildGroups(){
+  const [from,to]=mgFromTo(), m=new Map();
+  state.records.forEach(r=>{
+    const t=(r.title||'').trim(); if(!t)return;
+    if(r.date<from||r.date>to)return;
+    const nk=norm(t); if(!nk)return;
+    const key=state.aliases[nk]||nk;
+    if(!m.has(key))m.set(key,{key,h:0,n:0,last:'',titles:new Map(),ai:!!state.aliases[nk],cat:(r.cats||[])[0]});
+    const g=m.get(key);
+    g.h+=r.hours; g.n++; if(r.date>g.last)g.last=r.date;
+    g.titles.set(t,(g.titles.get(t)||0)+1);
+    if(!g.cat)g.cat=(r.cats||[])[0];
+  });
+  return [...m.values()].map(g=>{
+    const ts=[...g.titles.entries()].sort((a,b)=>b[1]-a[1]);
+    g.name=state.aliases[g.key]&&g.key!==norm(ts[0][0])?g.key:ts[0][0];
+    if(state.aliases[norm(ts[0][0])])g.name=state.aliases[norm(ts[0][0])];
+    g.list=ts; return g;
+  }).sort((a,b)=>b.h-a.h);
+}
+function setMgRange(r){ mgRange=r; renderMerge(); }
+let openGrp=null;
+function toggleGrp(k){ openGrp=openGrp===k?null:k; renderMerge(); }
+function renderMerge(){
+  const el=document.getElementById('mgList'); if(!el)return;
+  [...document.querySelectorAll('#mgSegs button')].forEach((b,i)=>
+    b.classList.toggle('on',['cycle','30','all'][i]===mgRange));
+  const gs=buildGroups();
+  document.getElementById('mgHint').innerHTML=
+    'ボタンを押したときだけ、<b>この期間のタイトル文字列</b>（時間と回数つき）をGoogleのGemini APIに送ります。日付・メモ・場所は送りません。'
+    +'<br>まとめた結果は端末に残るので、同じ書き方が次に出てきたらAIなしで自動でまとまります。';
+  if(!gs.length){ el.innerHTML='<div class="empty">この期間はタイトル付きの記録が無いよ</div>'; return; }
+  const mx=Math.max(...gs.map(g=>g.h));
+  el.innerHTML=gs.slice(0,40).map(g=>{
+    const c=catColor(g.cat), op=openGrp===g.key;
+    return `<div class="grp">
+      <div class="gh" onclick="toggleGrp('${escAttr(g.key).replace(/'/g,"\\'")}')">
+        <span class="gnm" style="color:${c}">${esc(g.name)}</span>
+        ${g.list.length>1?`<span class="ai">◇${g.list.length}種</span>`:''}
+        <span class="gc">${g.n}回・最終${g.last.slice(5)}</span>
+        <span class="gt">${g.h.toFixed(1)}h</span>
+      </div>
+      <div class="gbar"><i style="width:${g.h/mx*100}%;background:${c};color:${c}"></i></div>
+      ${op?`<div class="gdet">${g.list.map(([t,n])=>`<span class="t">${esc(t)}</span> ×${n}`).join('<br>')}
+        ${g.list.length>1?`<br><button onclick="event.stopPropagation();ungroup('${escAttr(g.key).replace(/'/g,"\\'")}')">これは別物 → バラす</button>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+function ungroup(k){
+  const g=buildGroups().find(x=>x.key===k); if(!g)return;
+  g.list.forEach(([t])=>delete state.aliases[norm(t)]);
+  delete state.aliases[k];
+  save(); openGrp=null; renderMerge(); toast('バラした');
+}
+async function aiMerge(){
+  const key=localStorage.getItem('gemini-key');
+  if(!key){ toast('じぶんカレンダーの⚙️でGemini APIキーを入れてね'); return; }
+  const [from,to]=mgFromTo();
+  const agg=new Map();
+  state.records.forEach(r=>{
+    const t=(r.title||'').trim(); if(!t||r.date<from||r.date>to)return;
+    if(!agg.has(t))agg.set(t,{n:0,h:0}); const a=agg.get(t); a.n++; a.h+=r.hours;
+  });
+  const titles=[...agg.entries()];
+  if(titles.length<2){ toast('まとめる相手がいないよ'); return; }
+  const b=document.getElementById('aiBtn');
+  b.disabled=true; b.textContent='🔮 Geminiが読んでる…';
+  const prompt=
+`次は、私が「やったこと」として記録したタイトルの一覧です。
+書き方がバラバラで、略称・愛称・正式名が混ざっています。
+
+同じ活動（同じ人・同じ案件・同じ作品・同じ用事）を指すものをまとめて、代表名をつけてください。
+
+ルール:
+- 略し方がどれだけ違っても、指しているものが同じならまとめる。
+  例:「マチアプ ビビちゃん」と「マッチングアプリ ビビ」は同じ活動。
+- 同じか確信が持てないものは、まとめずに分ける。混ぜる方が困るので、迷ったら分ける。
+- 一覧にあるタイトルは、1つしか無いものも含めて必ずどこかのグループに入れる。
+- 代表名は一覧の中の書き方から一番わかりやすいものを選ぶ。新しい言葉を作らない。
+- titles には、渡した文字列をそのまま1文字も変えずに入れる。
+
+タイトル一覧:
+${titles.map(([t,a])=>`- ${t} （${a.n}回・計${a.h.toFixed(1)}h）`).join('\n')}`;
+  try{
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`;
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      contents:[{parts:[{text:prompt}]}],
+      generationConfig:{ temperature:0, responseMimeType:'application/json', responseSchema:{
+        type:'OBJECT', properties:{ groups:{ type:'ARRAY', items:{ type:'OBJECT',
+          properties:{ name:{type:'STRING'}, titles:{type:'ARRAY',items:{type:'STRING'}} },
+          required:['name','titles'] } } }, required:['groups'] } }
+    })});
+    const j=await res.json();
+    if(!res.ok)throw new Error((j.error&&j.error.message)||('HTTP '+res.status));
+    const txt=j.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
+    const groups=(JSON.parse(txt).groups)||[];
+    let merged=0;
+    groups.forEach(g=>{
+      const ts=(g.titles||[]).filter(t=>agg.has(t));
+      if(ts.length<2)return;                       // 単独グループは別名を作らない
+      ts.forEach(t=>{ state.aliases[norm(t)]=g.name; });
+      merged++;
+    });
+    save(); openGrp=null; renderMerge();
+    toast(merged?merged+'グループにまとめた':'まとめられるものは無かった');
+    if(merged)sfxDecide();
+  }catch(e){ toast('AIが答えられなかった：'+e.message); }
+  finally{ b.disabled=false; b.textContent='🔮 表記ゆれをAIでまとめる'; }
 }
 
 /* 設定 */
