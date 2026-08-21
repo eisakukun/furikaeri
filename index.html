@@ -219,6 +219,20 @@
   .pal button.on{border-color:var(--cyan); box-shadow:var(--glow)}
   .pal button:disabled{opacity:.28; cursor:not-allowed}
   /* 名寄せ（同じことに何時間） */
+  /* 24時間の引き算 */
+  .lifebar{display:flex; height:34px; border:1px solid var(--line); background:#0a1024; overflow:hidden; margin:10px 0 4px}
+  .lifebar span{height:100%; display:flex; align-items:center; justify-content:center; font:9px "Courier New",monospace; color:#03121a; font-weight:900; overflow:hidden; white-space:nowrap}
+  .lifekey{display:flex; flex-wrap:wrap; gap:9px; font:10px "Courier New",monospace; color:var(--dim); margin-bottom:12px}
+  .lifekey b{display:inline-block; width:9px; height:9px; margin-right:3px; vertical-align:-1px}
+  .liferow{display:flex; align-items:center; gap:8px; padding:6px 0}
+  .liferow .ln{flex:1; font-size:13px; font-weight:700; min-width:0}
+  .liferow .ln small{display:block; color:var(--dim); font-weight:400; font-size:10px}
+  .liferow button{width:36px; height:36px; font-size:18px; font-weight:900; background:var(--panel2); border:1px solid var(--line); color:var(--text); cursor:pointer; flex:none}
+  .liferow .lv{width:56px; text-align:center; font-family:"Courier New",monospace; font-size:15px; font-weight:900; color:var(--cyan); flex:none}
+  .leftover{text-align:center; padding:13px; margin-top:10px; border:1px solid var(--cyan); background:rgba(0,240,255,.06); box-shadow:inset 0 0 18px rgba(0,240,255,.07)}
+  .leftover .n{font:900 30px "Courier New",monospace; color:var(--cyan); text-shadow:var(--glow)}
+  .leftover .c{font-size:11px; color:var(--dim); margin-top:3px}
+  .preset{width:100%; padding:13px; margin-top:12px; background:transparent; border:1px dashed var(--cyan); color:var(--cyan); font-weight:800; cursor:pointer; font-family:inherit}
   .segs{display:flex; gap:6px; margin-bottom:11px}
   .segs button{flex:1; padding:9px 4px; background:var(--panel2); border:1px solid var(--line); color:var(--dim); font-size:12px; font-weight:800; cursor:pointer; font-family:inherit}
   .segs button.on{border-color:var(--cyan); color:var(--cyan); box-shadow:var(--glow); background:transparent}
@@ -338,23 +352,24 @@
 <!-- 設定 -->
 <div id="viewGoal" class="hide">
   <div class="card">
-    <span class="lbl"><span id="budLbl">3日</span>で使える総枠（起きて何かに使う時間）</span>
-    <div class="budrow">
-      <button onclick="bumpBudget(-5)">−</button>
-      <div class="budval" id="budVal">70h</div>
-      <button onclick="bumpBudget(5)">＋</button>
+    <span class="lbl"><span id="budLbl">3日</span>＝<span id="totH">72</span>時間から引いていく</span>
+    <div class="lifebar" id="lifeBar"></div>
+    <div class="lifekey" id="lifeKey"></div>
+    <div id="lifeRows"></div>
+    <div class="leftover">
+      <div class="c">残り＝つかえる総枠</div>
+      <div class="n" id="budVal">30h</div>
+      <div class="c" id="budPerDay"></div>
     </div>
-    <div class="stack" id="budStack"></div>
-    <div class="freeline" id="budFree"></div>
-    <div class="hint">ここが有限だから「取り合い」になる。総枠を大きくしても1日は伸びないので、実感に近い数字にしておくのがコツ。</div>
-    <div class="lbl" style="margin-top:14px">1サイクルの長さ</div>
-    <div class="cyc" id="cycPick"></div>
-    <div class="hint">意識が届く範囲だけを1区切りにする。<b>だらけた区切りがあっても、次は勝手に始まります</b>（連続記録も罰もなし）。</div>
+    <div class="hint">「溶ける時間」は、疲れ・SNS・移動の待ち・切り替えでどうしても消える分。<b>ここを0にすると総枠が現実より大きくなって、信号が一生点きません。</b>正直に入れるほど当たります。</div>
   </div>
 
   <div class="card">
     <span class="lbl">種類ごとの<span id="goalLbl">3日</span>の枠（＝ここまでは使っていい上限）</span>
+    <div class="stack" id="budStack"></div>
+    <div class="freeline" id="budFree"></div>
     <div id="goalRows"></div>
+    <button class="preset" onclick="applyPreset()">✦ おすすめの配分を入れる</button>
     <div class="hint">これは「やれ」じゃなくて「ここまでなら他を潰さない」ライン。<br>
       実績が枠の8割で🟡＝ここから先は他の枠を削り始める。枠を超えたら🔴＝もう削ってる。</div>
   </div>
@@ -370,6 +385,8 @@
   <div class="card">
     <span class="lbl">答え合わせのスタート日</span>
     <div class="startrow"><input type="date" id="startDate" onchange="setStartDate(this.value)"></div>
+    <div class="lbl" style="margin-top:16px">1サイクルの長さ</div>
+    <div class="cyc" id="cycPick"></div>
     <div class="hint">この日が<b>サイクル#1の初日</b>になります。ここから3日ずつ機械的に区切るので、曜日は関係ありません。<br>
       これより前の期間には答え合わせが出ません。</div>
   </div>
@@ -979,14 +996,13 @@ function renderHUD(){
 }
 
 /* ---------- めやすタブ ---------- */
-function bumpBudget(n){ state.budget=Math.max(10,Math.min(140,state.budget+n)); save(); renderGoal(); renderHUD(); }
 function bumpGoal(n,d){
   state.goals[n]=Math.max(0,Math.round((goalOf(n)+d)*2)/2);
   save(); renderGoal(); renderHUD();
   if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
 }
 function renderGoal(){
-  document.getElementById('budVal').textContent=state.budget+'h';
+  renderLife();
   const sum=goalSum(), free=state.budget-sum, den=Math.max(state.budget,sum);
   document.getElementById('budStack').innerHTML=
     CATS.filter(c=>goalOf(c.n)>0).map(c=>`<span style="width:${goalOf(c.n)/den*100}%;background:${c.c}" title="${c.n} ${goalOf(c.n)}h"></span>`).join('')
@@ -1172,7 +1188,7 @@ function setCycleDays(n){
   const f=n/CD();
   state.budget=Math.round(state.budget*f*10)/10;
   Object.keys(state.goals).forEach(k=>state.goals[k]=Math.round(state.goals[k]*f*2)/2);
-  state.cycleDays=n; state.checks={}; save();
+  state.cycleDays=n; state.checks={}; recalcBudget(); save();
   viewStart=cycleIndex(todayStr()); renderGoal(); renderView(); renderHUD(); updateCkBanner();
   toast(n+'日サイクルにした（枠も割り直したよ）');
 }
@@ -1304,6 +1320,61 @@ ${titles.map(([t,a])=>`- ${t} （${a.n}回・計${a.h.toFixed(1)}h）`).join('\n
     if(merged)sfxDecide();
   }catch(e){ toast('AIが答えられなかった：'+e.message); }
   finally{ b.disabled=false; b.textContent='🔮 表記ゆれをAIでまとめる'; }
+}
+
+/* ---------- 24時間の引き算から総枠を出す ---------- */
+const LIFE=[
+  {k:'sleep',n:'睡眠',      d:'寝てる時間',                c:'#2a3559'},
+  {k:'meal', n:'飯',        d:'3食＋準備・片付け',          c:'#4a3a2a'},
+  {k:'misc', n:'風呂・身支度・移動', d:'風呂/歯みがき/着替え/移動', c:'#2a3f4a'},
+  {k:'melt', n:'溶ける時間',  d:'疲れ・SNS・待ち・切り替え',   c:'#4a2a3a'}
+];
+if(!state.life)state.life={sleep:7,meal:2,misc:2,melt:3};
+function lifeSum(){ return LIFE.reduce((a,l)=>a+(Number(state.life[l.k])||0),0); }
+function recalcBudget(){
+  const left=Math.max(0,(24-lifeSum())*CD());
+  state.budget=Math.round(left*2)/2; save();
+}
+function bumpLife(k,d){
+  state.life[k]=Math.max(0,Math.round(((Number(state.life[k])||0)+d)*2)/2);
+  if(lifeSum()>24)state.life[k]-=d;
+  recalcBudget(); renderGoal(); renderHUD();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
+}
+function renderLife(){
+  const n=CD(), total=24*n;
+  document.getElementById('totH').textContent=total;
+  document.getElementById('budLbl').textContent=n+'日';
+  const left=Math.max(0,(24-lifeSum())*n);
+  document.getElementById('lifeBar').innerHTML=
+    LIFE.map(l=>{ const h=(Number(state.life[l.k])||0)*n; if(h<=0)return '';
+      return `<span style="width:${h/total*100}%;background:${l.c};color:#8fa8c8">${h>=4?h.toFixed(0)+'h':''}</span>`; }).join('')
+    +`<span style="width:${left/total*100}%;background:var(--cyan)">${left>=4?left.toFixed(0)+'h':''}</span>`;
+  document.getElementById('lifeKey').innerHTML=
+    LIFE.map(l=>`<span><b style="background:${l.c}"></b>${l.n}</span>`).join('')
+    +`<span><b style="background:var(--cyan)"></b>つかえる時間</span>`;
+  document.getElementById('lifeRows').innerHTML=LIFE.map(l=>`
+    <div class="liferow">
+      <div class="ln">${l.n}<small>${l.d}　→ ${n}日で ${((Number(state.life[l.k])||0)*n).toFixed(1)}h</small></div>
+      <button onclick="bumpLife('${l.k}',-0.5)">−</button>
+      <div class="lv">${(Number(state.life[l.k])||0).toFixed(1)}</div>
+      <button onclick="bumpLife('${l.k}',0.5)">＋</button>
+    </div>`).join('');
+  document.getElementById('budVal').textContent=left.toFixed(1)+'h';
+  document.getElementById('budPerDay').textContent=`1日あたり ${(left/n).toFixed(1)}h`;
+}
+
+/* ---------- おすすめの配分を一発で入れる ---------- */
+const PRESET={'仕事':10,'研究・プログラミング':5,'生活・その他':2.5,'ダンス':2.5,
+  '人と会う・イベント':2,'撮影編集':1.5,'出会い':1.5,'3Dプリンター工作':1};
+function applyPreset(){
+  const f=CD()/3, hit=CATS.filter(c=>PRESET[c.n]!==undefined);
+  if(!hit.length){ toast('名前を変えたので当てはめられない'); return; }
+  if(!confirm('おすすめの配分を入れる？\n今の枠の数字は上書きされます。'))return;
+  hit.forEach(c=>state.goals[c.n]=Math.round(PRESET[c.n]*f*2)/2);
+  save(); renderGoal(); renderHUD();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
+  toast(hit.length+'個に入れた。あとは仕事の数字を実態に合わせてね');
 }
 
 /* 設定 */
