@@ -174,7 +174,10 @@
   /* めやす */
   .budrow{display:flex; align-items:center; gap:12px; justify-content:center; margin-bottom:12px}
   .budrow button{width:52px; height:52px; font-size:26px; font-weight:900; background:var(--panel2); border:1px solid var(--cyan); color:var(--cyan); cursor:pointer; box-shadow:var(--glow)}
-  .budval{font-family:"Courier New",monospace; font-size:30px; font-weight:900; color:var(--cyan); text-shadow:var(--glow); min-width:110px; text-align:center}
+  .budval{font-family:"Courier New",monospace; font-size:30px; font-weight:900; color:var(--cyan); text-shadow:var(--glow);
+    width:120px; text-align:center; background:var(--panel2); border:1px solid var(--line); padding:8px 0; -moz-appearance:textfield}
+  .budval::-webkit-outer-spin-button,.budval::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+  .freeline b{font-size:15px}
   .stack{display:flex; height:26px; border:1px solid var(--line); background:#0a1024; overflow:hidden; margin-bottom:7px}
   .stack span{height:100%; box-shadow:inset 0 0 8px rgba(0,0,0,.4)}
   .stack .free{background:repeating-linear-gradient(45deg,#141c36,#141c36 5px,#0d1428 5px,#0d1428 10px)}
@@ -339,20 +342,22 @@
 <!-- 設定 -->
 <div id="viewGoal" class="hide">
   <div class="card">
-    <span class="lbl"><span id="budLbl">3日</span>で使える総枠</span>
+    <span class="lbl">1日に起きてる時間　→ <span id="budLbl">3日</span>の総枠</span>
     <div class="budrow">
-      <button onclick="bumpBudget(-1)">−</button>
-      <div class="budval" id="budVal">30h</div>
-      <button onclick="bumpBudget(1)">＋</button>
+      <button onclick="bumpPerDay(-0.5)">−</button>
+      <input class="budval" id="budPerDay" type="number" step="0.5" min="1" max="24"
+             onchange="setPerDay(this.value)" onfocus="this.select()">
+      <button onclick="bumpPerDay(0.5)">＋</button>
     </div>
-    <div class="freeline" id="budPerDay" style="text-align:center;margin-bottom:14px"></div>
+    <div class="freeline" id="budVal" style="text-align:center;margin-bottom:14px"></div>
     <span class="lbl">種類ごとの<span id="goalLbl">3日</span>の枠（＝ここまでは使っていい上限）</span>
     <div class="stack" id="budStack"></div>
     <div class="freeline" id="budFree"></div>
     <div id="goalRows"></div>
     <button class="preset" onclick="applyPreset()">✦ おすすめの配分を入れる</button>
     <div class="hint">これは「やれ」じゃなくて「ここまでなら他を潰さない」ライン。<br>
-      実績が枠の8割で🟡＝ここから先は他の枠を削り始める。枠を超えたら🔴＝もう削ってる。</div>
+      実績が枠の8割で🟡＝ここから先は他の枠を削り始める。枠を超えたら🔴＝もう削ってる。<br>
+      <b>「どこにも決めてない時間」は余りではなく、飯・風呂・移動・疲れ・SNSで消える分です。</b>ここが0になるまで配ると、絶対に守れない設計になります。</div>
   </div>
 
   <div class="card">
@@ -452,7 +457,7 @@ state.cats.forEach((c,i)=>{ if(!c.g)c.g=(PALETTE[i]||PALETTE[PALETTE.length-1]).
   const pl=PALETTE.find(p=>p.g===c.g); if(pl)c.c=pl.c; });
 CATS=state.cats;
 if(!state.goals)state.goals={};
-if(typeof state.budget!=='number')state.budget=30;
+if(typeof state.budget!=='number')state.budget=51;   // 起きてる17h×3日
 if(typeof state.cycleDays!=='number')state.cycleDays=3;
 if(!state.checks)state.checks={};
 /* 答え合わせを始める日。過去の記録を掘り返して未読を大量発生させない。 */
@@ -982,15 +987,18 @@ function bumpGoal(n,d){
   save(); renderGoal(); renderHUD();
   if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
 }
-function bumpBudget(n){
-  state.budget=Math.max(1,Math.min(24*CD(),Math.round((state.budget+n)*2)/2)); save();
+/* 総枠は「1日に起きてる時間 × サイクル日数」。直接打てるようにしてある。 */
+function setPerDay(v){
+  const h=Math.max(1,Math.min(24,Number(v)||0));
+  state.budget=Math.round(h*CD()*2)/2; save();
   renderGoal(); renderHUD();
   if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
 }
+function bumpPerDay(d){ setPerDay(state.budget/CD()+d); }
 function renderGoal(){
   document.getElementById('budLbl').textContent=CD()+'日';
-  document.getElementById('budVal').textContent=state.budget.toFixed(1)+'h';
-  document.getElementById('budPerDay').textContent='1日あたり '+(state.budget/CD()).toFixed(1)+'h';
+  document.getElementById('budPerDay').value=(state.budget/CD()).toFixed(1);
+  document.getElementById('budVal').innerHTML=`× ${CD()}日 ＝ <b>${state.budget.toFixed(1)}h</b>`;
   const sum=goalSum(), free=state.budget-sum, den=Math.max(state.budget,sum);
   document.getElementById('budStack').innerHTML=
     CATS.filter(c=>goalOf(c.n)>0).map(c=>`<span style="width:${goalOf(c.n)/den*100}%;background:${c.c}" title="${c.n} ${goalOf(c.n)}h"></span>`).join('')
@@ -998,8 +1006,8 @@ function renderGoal(){
   const fl=document.getElementById('budFree');
   fl.className='freeline'+(free<0?' over':'');
   fl.innerHTML = free>=0
-    ? `割り当て ${sum.toFixed(1)}h ／ 余白 <b>${free.toFixed(1)}h</b>`
-    : `割り当て ${sum.toFixed(1)}h ／ <b>総枠を ${(-free).toFixed(1)}h オーバー</b>（どれか削らないと全部は入らない）`;
+    ? `割り当て ${sum.toFixed(1)}h ／ どこにも決めてない時間 <b>${free.toFixed(1)}h</b>`
+    : `割り当て ${sum.toFixed(1)}h ／ <b>起きてる時間を ${(-free).toFixed(1)}h オーバー</b>（物理的に入らない）`;
   document.getElementById('goalRows').innerHTML=CATS.map(c=>{
     const g=goalOf(c.n);
     return `<div class="goalrow">
