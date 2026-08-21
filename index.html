@@ -223,6 +223,8 @@
   .pal button:disabled{opacity:.28; cursor:not-allowed}
   /* 名寄せ（同じことに何時間） */
   /* 1日の合計にかかる信号 */
+  .zonebar{display:flex; height:26px; border:1px solid var(--line); background:#0a1024; overflow:hidden}
+  .zonebar span{height:100%; display:flex; align-items:center; justify-content:center; font:9px "Courier New",monospace; font-weight:900; color:#03121a; white-space:nowrap; overflow:hidden}
   .liferow2{display:flex; align-items:center; gap:8px; padding:6px 0}
   .liferow2 .ln{flex:1; font-size:13px; font-weight:700; min-width:0}
   .liferow2 .ln small{display:block; color:var(--dim); font-weight:400; font-size:10px}
@@ -359,7 +361,7 @@
 <!-- 設定 -->
 <div id="viewGoal" class="hide">
   <div class="card">
-    <span class="lbl">1日に起きてる時間　→ <span id="budLbl">3日</span>の総枠</span>
+    <span class="lbl">1日にタスクへ回せる時間　→ <span id="budLbl">3日</span>の総枠</span>
     <div class="budrow">
       <button onclick="bumpPerDay(-0.5)">−</button>
       <input class="budval" id="budPerDay" type="number" step="0.5" min="1" max="24"
@@ -367,15 +369,18 @@
       <button onclick="bumpPerDay(0.5)">＋</button>
     </div>
     <div class="freeline" id="budVal" style="text-align:center;margin-bottom:14px"></div>
+    <div class="freeline" style="text-align:center;margin:-6px 0 12px">24h から 睡眠と、飯・風呂・移動を引いた残り</div>
+    <div class="zonebar" id="zoneBar"></div>
+    <div class="freeline" id="dayCalc" style="text-align:center;margin:6px 0 14px"></div>
     <div class="liferow2">
-      <div class="ln">1日の通常ライン<small>ここを超えると🟡</small></div>
-      <button onclick="bumpDay('dayLimit',-0.5)">−</button><div class="lv" id="dlVal">9.0</div><button onclick="bumpDay('dayLimit',0.5)">＋</button>
-    </div>
-    <div class="liferow2">
-      <div class="ln">余裕<small>使い切ると🔴</small></div>
+      <div class="ln">あけておきたい余裕<small>上から引く。ここを食い始めたら🟡</small></div>
       <button onclick="bumpDay('dayBuffer',-0.5)">−</button><div class="lv" id="dbVal">3.0</div><button onclick="bumpDay('dayBuffer',0.5)">＋</button>
     </div>
-    <div class="freeline" id="dayCalc" style="text-align:center;margin:6px 0 16px"></div>
+    <div class="liferow2">
+      <div class="ln">危険ライン<small>ここを超えたら🔴</small></div>
+      <button onclick="bumpDay('dayDanger',-0.5)">−</button><div class="lv" id="dlVal">9.0</div><button onclick="bumpDay('dayDanger',0.5)">＋</button>
+    </div>
+    <div style="height:16px"></div>
 
     <span class="lbl">種類ごとの<span id="goalLbl">3日</span>の枠（＝ここまでは使っていい上限）</span>
     <div class="stack" id="budStack"></div>
@@ -842,7 +847,7 @@ function renderView(){
     const dr=recs.filter(r=>r.date===ds).sort((a,b)=>a.ts-b.ts);
     const dh=dayHours(ds), dsg=daySig(dh);
     html+=`<div class="day"><div class="dh">${ds.slice(5)}（${DOW[day.getDay()]}）`
-      +(dh>0?`<span class="dsig" style="color:${dsg==='r'?'#ff3b3b':dsg==='y'?'#f9f002':'var(--dim)'}"><span class="sig ${dsg}"></span>${dh.toFixed(1)}h / ${state.dayLimit}h</span>`:'')
+      +(dh>0?`<span class="dsig" style="color:${dsg==='r'?'#ff3b3b':dsg==='y'?'#f9f002':'var(--dim)'}"><span class="sig ${dsg}"></span>${dh.toFixed(1)}h / ${state.dayDanger}h</span>`:'')
       +`</div>`;
     if(!dr.length) html+='<div class="rec" style="color:var(--dim)">—</div>';
     const timed=dr.map(r=>{
@@ -1007,7 +1012,7 @@ function renderHUD(){
     return `<span class="sig ${sg}" title="${c.n} ${(wk.tot[c.n]||0).toFixed(1)}h / ${caps[c.n].toFixed(0)}h"></span>`;
   }).join('');
   const ds=daySig(td.total);
-  el.innerHTML=`<span class="sig ${ds}"></span>今日 <span class="hv" style="color:${ds==='r'?'#ff3b3b':ds==='y'?'#f9f002':'var(--cyan)'}">${td.total.toFixed(1)}h</span><span style="color:var(--dim)">/${state.dayLimit}h</span>　`
+  el.innerHTML=`<span class="sig ${ds}"></span>今日 <span class="hv" style="color:${ds==='r'?'#ff3b3b':ds==='y'?'#f9f002':'var(--cyan)'}">${td.total.toFixed(1)}h</span><span style="color:var(--dim)">/${state.dayDanger}h</span>　`
     +`このサイクル(${dayDiff(from,t)+1}/${CD()}日) <span class="hv">${wk.total.toFixed(1)}h</span> / ${state.budget}h`
     +`<span class="lamps">${lamps}</span>`;
 }
@@ -1028,10 +1033,16 @@ function setPerDay(v){
 function bumpPerDay(d){ setPerDay(state.budget/CD()+d); }
 function renderGoal(){
   document.getElementById('budLbl').textContent=CD()+'日';
-  document.getElementById('dlVal').textContent=state.dayLimit.toFixed(1);
+  if(state.dayDanger>perDay())state.dayDanger=perDay();
+  document.getElementById('dlVal').textContent=state.dayDanger.toFixed(1);
   document.getElementById('dbVal').textContent=state.dayBuffer.toFixed(1);
+  const P=perDay(),G=greenLine(),D=state.dayDanger;
+  document.getElementById('zoneBar').innerHTML=
+     `<span style="width:${G/P*100}%;background:#00ff9f">${G>=1.5?G.toFixed(1)+'h':''}</span>`
+    +`<span style="width:${Math.max(0,(D-G))/P*100}%;background:#f9f002">${D-G>=1.5?'余裕':''}</span>`
+    +`<span style="width:${Math.max(0,(P-D))/P*100}%;background:#ff3b3b">${P-D>=1.5?'危険':''}</span>`;
   document.getElementById('dayCalc').innerHTML=
-    `🟡 ${state.dayLimit}h 超え　🔴 <b>${dayCap().toFixed(1)}h</b> 超え　／ 残り ${(state.budget/CD()-dayCap()).toFixed(1)}h が飯・風呂・移動`;
+    `🟢 〜${G.toFixed(1)}h　🟡 ${G.toFixed(1)}h超え　🔴 <b>${D.toFixed(1)}h超え</b>　／ 1日の上限 ${P.toFixed(1)}h`;
   document.getElementById('budPerDay').value=(state.budget/CD()).toFixed(1);
   document.getElementById('budVal').innerHTML=`× ${CD()}日 ＝ <b>${state.budget.toFixed(1)}h</b>`;
   const sum=goalSum(), free=state.budget-sum, den=Math.max(state.budget,sum);
@@ -1370,12 +1381,20 @@ function applyPreset(){
    1日の合計にかかる信号。カテゴリごとの枠とは別物で、
    「今日ぜんぶで詰め込みすぎてないか」だけを見る。過集中の検知用。
    ================================================================== */
-if(typeof state.dayLimit!=='number')state.dayLimit=9;
+/* 1日にタスクへ回せる時間(=perDay) を上限とし、そこから余裕を引いた線が緑の端。
+   余裕は「上から引く」もので、危険ラインに足すものではない。 */
+if(typeof state.dayDanger!=='number')state.dayDanger=(typeof state.dayLimit==='number'?state.dayLimit:9);
 if(typeof state.dayBuffer!=='number')state.dayBuffer=3;
-const dayCap=()=>state.dayLimit+state.dayBuffer;
-function daySig(h){ return h>dayCap()?'r':(h>state.dayLimit?'y':'g'); }
+delete state.dayLimit;
+const perDay=()=>state.budget/CD();
+const greenLine=()=>Math.max(0,perDay()-state.dayBuffer);
+const dayCap=()=>perDay();
+function daySig(h){ return h>state.dayDanger?'r':(h>greenLine()?'y':'g'); }
 function bumpDay(k,d){
-  state[k]=Math.max(0.5,Math.min(24,Math.round((state[k]+d)*2)/2)); save();
+  let v=Math.round((state[k]+d)*2)/2;
+  if(k==='dayBuffer')v=Math.max(0,Math.min(perDay(),v));
+  else v=Math.max(0.5,Math.min(perDay(),v));          // 危険ラインは1日の上限を超えられない
+  state[k]=v; save();
   renderGoal(); renderHUD(); renderDayWarn();
   if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
 }
@@ -1387,17 +1406,17 @@ function renderDayWarn(){
   const base=dayHours(selDate);
   const pend=pendingSchedules.filter(p=>!p.recorded);
   const add=pend.length?pend.reduce((a,p)=>a+p.hours,0):Math.max(0,selEnd-selStart);
-  const after=base+add, sig=daySig(after), L=state.dayLimit, C=dayCap();
-  const scale=Math.max(C*1.15,after);
+  const after=base+add, sig=daySig(after), P=perDay(), G=greenLine(), D=state.dayDanger;
+  const scale=Math.max(P,after);
   el.className='daywarn '+sig;
   let msg;
-  if(sig==='g')      msg=`今日 <b>${base.toFixed(1)}h</b> → 入れると <b>${after.toFixed(1)}h</b><span class="sub">通常ライン ${L}h まで あと ${(L-after).toFixed(1)}h</span>`;
-  else if(sig==='y') msg=`🟡 入れると今日 <b>${after.toFixed(1)}h</b>。${L}h を超える<span class="sub">余裕 ${state.dayBuffer}h のうち ${(after-L).toFixed(1)}h を使う。残り ${(C-after).toFixed(1)}h</span>`;
-  else               msg=`🔴 入れると今日 <b>${after.toFixed(1)}h</b>。余裕まで使い切って <b>${(after-C).toFixed(1)}h</b> オーバー<span class="sub">起きてる時間から飯・風呂・移動が削られてる</span>`;
+  if(sig==='g')      msg=`今日 <b>${base.toFixed(1)}h</b> → 入れると <b>${after.toFixed(1)}h</b><span class="sub">余裕 ${state.dayBuffer}h を残せるのは ${G.toFixed(1)}h まで（あと ${(G-after).toFixed(1)}h）</span>`;
+  else if(sig==='y') msg=`🟡 入れると今日 <b>${after.toFixed(1)}h</b>。あけておきたい余裕を <b>${(after-G).toFixed(1)}h</b> 食う<span class="sub">危険ライン ${D.toFixed(1)}h まで あと ${(D-after).toFixed(1)}h</span>`;
+  else               msg=`🔴 入れると今日 <b>${after.toFixed(1)}h</b>。危険ライン ${D.toFixed(1)}h を <b>${(after-D).toFixed(1)}h</b> 超える<span class="sub">${after>P?`1日に回せる ${P.toFixed(1)}h からも ${(after-P).toFixed(1)}h ハミ出てる`:`残りは ${(P-after).toFixed(1)}h しかない`}</span>`;
   el.innerHTML=msg+`<div class="dayline">
       <i style="width:${Math.min(100,base/scale*100)}%;background:var(--cyan);color:var(--cyan);opacity:.55"></i>
       <i style="left:${Math.min(100,base/scale*100)}%;width:${Math.min(100-base/scale*100,add/scale*100)}%;background:${sig==='r'?'#ff3b3b':sig==='y'?'#f9f002':'#00ff9f'};color:${sig==='r'?'#ff3b3b':sig==='y'?'#f9f002':'#00ff9f'}"></i>
-      <u style="left:${L/scale*100}%"></u><s style="left:${C/scale*100}%"></s></div>`;
+      <u style="left:${G/scale*100}%"></u><s style="left:${D/scale*100}%"></s></div>`;
 }
 
 /* 設定 */
