@@ -222,6 +222,22 @@
   .pal button.on{border-color:var(--cyan); box-shadow:var(--glow)}
   .pal button:disabled{opacity:.28; cursor:not-allowed}
   /* 名寄せ（同じことに何時間） */
+  /* 1日の合計にかかる信号 */
+  .liferow2{display:flex; align-items:center; gap:8px; padding:6px 0}
+  .liferow2 .ln{flex:1; font-size:13px; font-weight:700; min-width:0}
+  .liferow2 .ln small{display:block; color:var(--dim); font-weight:400; font-size:10px}
+  .liferow2 button{width:36px; height:36px; font-size:18px; font-weight:900; background:var(--panel2); border:1px solid var(--line); color:var(--text); cursor:pointer; flex:none}
+  .liferow2 .lv{width:52px; text-align:center; font-family:"Courier New",monospace; font-size:15px; font-weight:900; color:var(--cyan); flex:none}
+  .daywarn{padding:11px 13px; margin-top:10px; font-size:13px; line-height:1.6; border-left:3px solid var(--dim); background:#0a1024}
+  .daywarn.g{border-color:#00ff9f} .daywarn.y{border-color:#f9f002; color:#f9f002; animation:blink 1.6s infinite}
+  .daywarn.r{border-color:#ff3b3b; color:#ff3b3b; animation:blink .8s infinite}
+  .daywarn b{font-family:"Courier New",monospace; font-size:15px}
+  .daywarn .sub{display:block; font-size:11px; opacity:.85; margin-top:3px}
+  .dayline{display:flex; align-items:center; gap:7px; height:9px; background:#0a1024; border:1px solid var(--line); margin-top:8px; position:relative; overflow:visible}
+  .dayline i{position:absolute; left:0; top:0; bottom:0; box-shadow:0 0 8px currentColor}
+  .dayline u{position:absolute; top:-3px; bottom:-3px; width:0; border-left:2px dashed #f9f002}
+  .dayline s{position:absolute; top:-3px; bottom:-3px; width:0; border-left:2px dashed #ff3b3b}
+  .day .dh .dsig{float:right; font:10px "Courier New",monospace}
   .preset{width:100%; padding:13px; margin-top:12px; background:transparent; border:1px dashed var(--cyan); color:var(--cyan); font-weight:800; cursor:pointer; font-family:inherit}
   .segs{display:flex; gap:6px; margin-bottom:11px}
   .segs button{flex:1; padding:9px 4px; background:var(--panel2); border:1px solid var(--line); color:var(--dim); font-size:12px; font-weight:800; cursor:pointer; font-family:inherit}
@@ -299,7 +315,8 @@
     <textarea id="memo" placeholder="ひとことでも、空でも"></textarea>
   </div>
 
-  <button class="rec-btn" id="recordBtn" onclick="record()">記録する</button>
+  <div class="daywarn" id="dayWarn"></div>
+<button class="rec-btn" id="recordBtn" onclick="record()">記録する</button>
   <button class="unsync hide" id="unsyncBtn" onclick="resendAll()"></button>
 </div>
 
@@ -350,6 +367,16 @@
       <button onclick="bumpPerDay(0.5)">＋</button>
     </div>
     <div class="freeline" id="budVal" style="text-align:center;margin-bottom:14px"></div>
+    <div class="liferow2">
+      <div class="ln">1日の通常ライン<small>ここを超えると🟡</small></div>
+      <button onclick="bumpDay('dayLimit',-0.5)">−</button><div class="lv" id="dlVal">9.0</div><button onclick="bumpDay('dayLimit',0.5)">＋</button>
+    </div>
+    <div class="liferow2">
+      <div class="ln">余裕<small>使い切ると🔴</small></div>
+      <button onclick="bumpDay('dayBuffer',-0.5)">−</button><div class="lv" id="dbVal">3.0</div><button onclick="bumpDay('dayBuffer',0.5)">＋</button>
+    </div>
+    <div class="freeline" id="dayCalc" style="text-align:center;margin:6px 0 16px"></div>
+
     <span class="lbl">種類ごとの<span id="goalLbl">3日</span>の枠（＝ここまでは使っていい上限）</span>
     <div class="stack" id="budStack"></div>
     <div class="freeline" id="budFree"></div>
@@ -520,7 +547,7 @@ function renderCats(){
     c.appendChild(b);
   });
 }
-function syncDateUI(){
+function syncDateUI(){ setTimeout(renderDayWarn,0);
   editingRecordedIndex=-1;
   document.getElementById('dDate').value=selDate;
   document.getElementById('dDate').max=todayStr();
@@ -589,7 +616,7 @@ function renderTL(){
   selH=Math.max(0.5, selEnd-selStart);
   renderTLInfo();
 }
-function renderTLInfo(){
+function renderTLInfo(){ renderDayWarn();
   const p=selectedPendingIndex>=0?pendingSchedules[selectedPendingIndex]:null;
   const start=p?p.startH:selStart, end=p?p.endH:selEnd, hours=Math.max(.5,end-start);
   const title=p?p.title:(document.getElementById('recTitle')?.value.trim()||'');
@@ -683,7 +710,7 @@ function record(){
   items.forEach((p,i)=>{ p.recorded=true; p.recordId=recs[i].id; });   // きろく済みは消さずに薄く残す
   // リセット（次もサッと入れられるように）
   selCats=new Set([CATS[0].n]); selectedPendingIndex=-1; editingRecordedIndex=-1; selStart=9; selEnd=10; document.getElementById('recTitle').value=''; document.getElementById('memo').value='';
-  renderCats(); renderDrafts(); renderTL();
+  renderCats(); renderDrafts(); renderTL(); renderDayWarn();
   sfxRec();
   toast(recs.length+'件記録した！');
   recs.forEach(syncOne);  // 裏でGASへ
@@ -813,7 +840,10 @@ function renderView(){
     const day=addDays(new Date(from+'T00:00:00'),i), ds=iso(day);
     if(ds>todayStr())break;                       // 未来の日は置かない
     const dr=recs.filter(r=>r.date===ds).sort((a,b)=>a.ts-b.ts);
-    html+=`<div class="day"><div class="dh">${ds.slice(5)}（${DOW[day.getDay()]}）</div>`;
+    const dh=dayHours(ds), dsg=daySig(dh);
+    html+=`<div class="day"><div class="dh">${ds.slice(5)}（${DOW[day.getDay()]}）`
+      +(dh>0?`<span class="dsig" style="color:${dsg==='r'?'#ff3b3b':dsg==='y'?'#f9f002':'var(--dim)'}"><span class="sig ${dsg}"></span>${dh.toFixed(1)}h / ${state.dayLimit}h</span>`:'')
+      +`</div>`;
     if(!dr.length) html+='<div class="rec" style="color:var(--dim)">—</div>';
     const timed=dr.map(r=>{
       const parse=h=>{ if(!h)return null; const p=String(h).split(':').map(Number); return p[0]+(p[1]||0)/60; };
@@ -976,7 +1006,8 @@ function renderHUD(){
     const sg=sigOf(wk.tot[c.n]||0,caps[c.n]);
     return `<span class="sig ${sg}" title="${c.n} ${(wk.tot[c.n]||0).toFixed(1)}h / ${caps[c.n].toFixed(0)}h"></span>`;
   }).join('');
-  el.innerHTML=`今日 <span class="hv">${td.total.toFixed(1)}h</span>　`
+  const ds=daySig(td.total);
+  el.innerHTML=`<span class="sig ${ds}"></span>今日 <span class="hv" style="color:${ds==='r'?'#ff3b3b':ds==='y'?'#f9f002':'var(--cyan)'}">${td.total.toFixed(1)}h</span><span style="color:var(--dim)">/${state.dayLimit}h</span>　`
     +`このサイクル(${dayDiff(from,t)+1}/${CD()}日) <span class="hv">${wk.total.toFixed(1)}h</span> / ${state.budget}h`
     +`<span class="lamps">${lamps}</span>`;
 }
@@ -997,6 +1028,10 @@ function setPerDay(v){
 function bumpPerDay(d){ setPerDay(state.budget/CD()+d); }
 function renderGoal(){
   document.getElementById('budLbl').textContent=CD()+'日';
+  document.getElementById('dlVal').textContent=state.dayLimit.toFixed(1);
+  document.getElementById('dbVal').textContent=state.dayBuffer.toFixed(1);
+  document.getElementById('dayCalc').innerHTML=
+    `🟡 ${state.dayLimit}h 超え　🔴 <b>${dayCap().toFixed(1)}h</b> 超え　／ 残り ${(state.budget/CD()-dayCap()).toFixed(1)}h が飯・風呂・移動`;
   document.getElementById('budPerDay').value=(state.budget/CD()).toFixed(1);
   document.getElementById('budVal').innerHTML=`× ${CD()}日 ＝ <b>${state.budget.toFixed(1)}h</b>`;
   const sum=goalSum(), free=state.budget-sum, den=Math.max(state.budget,sum);
@@ -1329,6 +1364,40 @@ function applyPreset(){
   save(); renderGoal(); renderHUD();
   if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
   toast(hit.length+'個に入れた。あとは仕事の数字を実態に合わせてね');
+}
+
+/* ==================================================================
+   1日の合計にかかる信号。カテゴリごとの枠とは別物で、
+   「今日ぜんぶで詰め込みすぎてないか」だけを見る。過集中の検知用。
+   ================================================================== */
+if(typeof state.dayLimit!=='number')state.dayLimit=9;
+if(typeof state.dayBuffer!=='number')state.dayBuffer=3;
+const dayCap=()=>state.dayLimit+state.dayBuffer;
+function daySig(h){ return h>dayCap()?'r':(h>state.dayLimit?'y':'g'); }
+function bumpDay(k,d){
+  state[k]=Math.max(0.5,Math.min(24,Math.round((state[k]+d)*2)/2)); save();
+  renderGoal(); renderHUD(); renderDayWarn();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
+}
+function dayHours(ds){ return state.records.reduce((a,r)=>a+(r.date===ds?r.hours:0),0); }
+
+/* 記録する前に「入れたらどうなるか」を出す。事後の反省より効く。 */
+function renderDayWarn(){
+  const el=document.getElementById('dayWarn'); if(!el)return;
+  const base=dayHours(selDate);
+  const pend=pendingSchedules.filter(p=>!p.recorded);
+  const add=pend.length?pend.reduce((a,p)=>a+p.hours,0):Math.max(0,selEnd-selStart);
+  const after=base+add, sig=daySig(after), L=state.dayLimit, C=dayCap();
+  const scale=Math.max(C*1.15,after);
+  el.className='daywarn '+sig;
+  let msg;
+  if(sig==='g')      msg=`今日 <b>${base.toFixed(1)}h</b> → 入れると <b>${after.toFixed(1)}h</b><span class="sub">通常ライン ${L}h まで あと ${(L-after).toFixed(1)}h</span>`;
+  else if(sig==='y') msg=`🟡 入れると今日 <b>${after.toFixed(1)}h</b>。${L}h を超える<span class="sub">余裕 ${state.dayBuffer}h のうち ${(after-L).toFixed(1)}h を使う。残り ${(C-after).toFixed(1)}h</span>`;
+  else               msg=`🔴 入れると今日 <b>${after.toFixed(1)}h</b>。余裕まで使い切って <b>${(after-C).toFixed(1)}h</b> オーバー<span class="sub">起きてる時間から飯・風呂・移動が削られてる</span>`;
+  el.innerHTML=msg+`<div class="dayline">
+      <i style="width:${Math.min(100,base/scale*100)}%;background:var(--cyan);color:var(--cyan);opacity:.55"></i>
+      <i style="left:${Math.min(100,base/scale*100)}%;width:${Math.min(100-base/scale*100,add/scale*100)}%;background:${sig==='r'?'#ff3b3b':sig==='y'?'#f9f002':'#00ff9f'};color:${sig==='r'?'#ff3b3b':sig==='y'?'#f9f002':'#00ff9f'}"></i>
+      <u style="left:${L/scale*100}%"></u><s style="left:${C/scale*100}%"></s></div>`;
 }
 
 /* 設定 */
