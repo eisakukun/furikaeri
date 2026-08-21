@@ -478,7 +478,9 @@ const DEFAULT_CATS=[
   {n:'ダンス',          c:'#ff2e97', i:'🕺', g:'PALE_RED'},
   {n:'出会い',          c:'#ff6a00', i:'✨', g:'ORANGE'},
   {n:'人と会う・イベント', c:'#f9f002', i:'🎉', g:'YELLOW'},
-  {n:'生活・その他',     c:'#8a93b0', i:'🏠', g:'GRAY'}
+  {n:'生活・その他',     c:'#8a93b0', i:'🏠', g:'GRAY'},
+  {n:'日本語',          c:'#3b6bff', i:'📖', g:'BLUE'},
+  {n:'音楽',            c:'#7dff5c', i:'🎵', g:'PALE_GREEN'}
 ];
 let CATS=DEFAULT_CATS;
 const catColor=n=>{ const x=CATS.find(c=>c.n===n); return x?x.c:'#8a93b0'; };
@@ -492,6 +494,17 @@ const DEFAULT_GOALS={'仕事':9,'撮影編集':2,'研究・プログラミング
 if(!Array.isArray(state.cats)||!state.cats.length)state.cats=JSON.parse(JSON.stringify(DEFAULT_CATS));
 state.cats.forEach((c,i)=>{ if(!c.g)c.g=(PALETTE[i]||PALETTE[PALETTE.length-1]).g;
   const pl=PALETTE.find(p=>p.g===c.g); if(pl)c.c=pl.c; });
+/* 追加ぶんを既存の端末にも一度だけ入れる（色は空いてるものを使う） */
+state.goals=state.goals||{};
+[{n:'日本語',i:'📖',g:'BLUE'},{n:'音楽',i:'🎵',g:'PALE_GREEN'}].forEach(add=>{
+  if(state.cats.some(c=>c.n===add.n))return;
+  if(state.cats.length>=PALETTE.length)return;
+  const used=new Set(state.cats.map(c=>c.g));
+  const pl=PALETTE.find(p=>p.g===add.g&&!used.has(p.g))||PALETTE.find(p=>!used.has(p.g));
+  if(!pl)return;
+  state.cats.push({n:add.n,i:add.i,g:pl.g,c:pl.c});
+  if(typeof state.goals[add.n]!=='number')state.goals[add.n]=0;
+});
 CATS=state.cats;
 if(!state.goals)state.goals={};
 if(typeof state.budget!=='number')state.budget=51;   // 起きてる17h×3日
@@ -1368,8 +1381,9 @@ ${titles.map(([t,a])=>`- ${t} （${a.n}回・計${a.h.toFixed(1)}h）`).join('\n
 }
 
 /* ---------- おすすめの配分を一発で入れる ---------- */
-const PRESET={'仕事':10,'研究・プログラミング':5,'生活・その他':2.5,'ダンス':2.5,
-  '人と会う・イベント':2,'撮影編集':1.5,'出会い':1.5,'3Dプリンター工作':1};
+/* 合計27h＝危険ライン9h×3日。種類が増えたら誰かが減る、が見えるようにしてある。 */
+const PRESET={'仕事':10,'研究・プログラミング':4,'ダンス':2.5,'生活・その他':2.5,
+  '音楽':2,'日本語':1.5,'人と会う・イベント':1.5,'撮影編集':1.5,'出会い':1,'3Dプリンター工作':0.5};
 function applyPreset(){
   const f=CD()/3, hit=CATS.filter(c=>PRESET[c.n]!==undefined);
   if(!hit.length){ toast('名前を変えたので当てはめられない'); return; }
