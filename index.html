@@ -223,6 +223,16 @@
   .pal button:disabled{opacity:.28; cursor:not-allowed}
   /* 名寄せ（同じことに何時間） */
   /* 1日の合計にかかる信号 */
+  .calcrow{display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; margin:4px 0 8px}
+  .calcrow .ct{font:900 20px "Courier New",monospace; color:var(--text)}
+  .calcrow .op{color:var(--dim); font-size:17px}
+  .calcrow .cb{display:flex; align-items:center; gap:4px; font-size:11px; color:var(--dim)}
+  .calcrow .cb b{font:900 18px "Courier New",monospace; color:var(--text); min-width:40px; text-align:center}
+  .calcrow .cb button{width:30px; height:30px; font-size:15px; font-weight:900; background:var(--panel2); border:1px solid var(--line); color:var(--text); cursor:pointer}
+  .calcout{text-align:center; margin-bottom:9px}
+  .calcout .pd{font:900 40px "Courier New",monospace; color:var(--cyan); text-shadow:var(--glow)}
+  .calcout .mul{font:11px "Courier New",monospace; color:var(--dim)}
+  .calcout .mul b{font-size:17px; color:var(--cyan)}
   .zonebar{display:flex; height:26px; border:1px solid var(--line); background:#0a1024; overflow:hidden}
   .zonebar span{height:100%; display:flex; align-items:center; justify-content:center; font:9px "Courier New",monospace; font-weight:900; color:#03121a; white-space:nowrap; overflow:hidden}
   .liferow2{display:flex; align-items:center; gap:8px; padding:6px 0}
@@ -361,26 +371,21 @@
 <!-- 設定 -->
 <div id="viewGoal" class="hide">
   <div class="card">
-    <span class="lbl">1日にタスクへ回せる時間　→ <span id="budLbl">3日</span>の総枠</span>
-    <div class="budrow">
-      <button onclick="bumpPerDay(-0.5)">−</button>
-      <input class="budval" id="budPerDay" type="number" step="0.5" min="1" max="24"
-             onchange="setPerDay(this.value)" onfocus="this.select()">
-      <button onclick="bumpPerDay(0.5)">＋</button>
+    <span class="lbl">1日に振り分ける時間　→ <span id="budLbl">3日</span>の総枠</span>
+    <div class="calcrow">
+      <span class="ct">24h</span><span class="op">−</span>
+      <span class="cb">睡眠<button onclick="bumpDay('sleep',-0.5)">−</button><b id="slVal">7.0</b><button onclick="bumpDay('sleep',0.5)">＋</button></span>
+      <span class="op">−</span>
+      <span class="cb">余裕<button onclick="bumpDay('dayBuffer',-0.5)">−</button><b id="dbVal">3.0</b><button onclick="bumpDay('dayBuffer',0.5)">＋</button></span>
     </div>
-    <div class="freeline" id="budVal" style="text-align:center;margin-bottom:14px"></div>
-    <div class="freeline" style="text-align:center;margin:-6px 0 12px">24h から 睡眠と、飯・風呂・移動を引いた残り</div>
+    <div class="calcout"><span class="pd" id="budPerDay">14.0</span><span class="mul">h ／日　×<span id="cdN">3</span>日 ＝ <b id="budVal">42.0h</b></span></div>
     <div class="zonebar" id="zoneBar"></div>
-    <div class="freeline" id="dayCalc" style="text-align:center;margin:6px 0 14px"></div>
+    <div class="freeline" id="dayCalc" style="text-align:center;margin:6px 0 12px"></div>
     <div class="liferow2">
-      <div class="ln">あけておきたい余裕<small>上から引く。ここを食い始めたら🟡</small></div>
-      <button onclick="bumpDay('dayBuffer',-0.5)">−</button><div class="lv" id="dbVal">3.0</div><button onclick="bumpDay('dayBuffer',0.5)">＋</button>
-    </div>
-    <div class="liferow2">
-      <div class="ln">危険ライン<small>ここを超えたら🔴</small></div>
+      <div class="ln">1日の危険ライン<small>1日の記録合計がここを超えたら🟡</small></div>
       <button onclick="bumpDay('dayDanger',-0.5)">−</button><div class="lv" id="dlVal">9.0</div><button onclick="bumpDay('dayDanger',0.5)">＋</button>
     </div>
-    <div style="height:16px"></div>
+    <div class="freeline" id="dangerCalc" style="text-align:center;margin:2px 0 16px"></div>
 
     <span class="lbl">種類ごとの<span id="goalLbl">3日</span>の枠（＝ここまでは使っていい上限）</span>
     <div class="stack" id="budStack"></div>
@@ -1024,27 +1029,25 @@ function bumpGoal(n,d){
   if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
 }
 /* 総枠は「1日に起きてる時間 × サイクル日数」。直接打てるようにしてある。 */
-function setPerDay(v){
-  const h=Math.max(1,Math.min(24,Number(v)||0));
-  state.budget=Math.round(h*CD()*2)/2; save();
-  renderGoal(); renderHUD();
-  if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
-}
-function bumpPerDay(d){ setPerDay(state.budget/CD()+d); }
+
 function renderGoal(){
   document.getElementById('budLbl').textContent=CD()+'日';
+  syncBudget();
   if(state.dayDanger>perDay())state.dayDanger=perDay();
-  document.getElementById('dlVal').textContent=state.dayDanger.toFixed(1);
+  const P=perDay(),D=state.dayDanger;
+  document.getElementById('slVal').textContent=state.sleep.toFixed(1);
   document.getElementById('dbVal').textContent=state.dayBuffer.toFixed(1);
-  const P=perDay(),G=greenLine(),D=state.dayDanger;
+  document.getElementById('dlVal').textContent=D.toFixed(1);
+  document.getElementById('cdN').textContent=CD();
+  document.getElementById('budPerDay').textContent=P.toFixed(1);
+  document.getElementById('budVal').textContent=state.budget.toFixed(1)+'h';
   document.getElementById('zoneBar').innerHTML=
-     `<span style="width:${G/P*100}%;background:#00ff9f">${G>=1.5?G.toFixed(1)+'h':''}</span>`
-    +`<span style="width:${Math.max(0,(D-G))/P*100}%;background:#f9f002">${D-G>=1.5?'余裕':''}</span>`
-    +`<span style="width:${Math.max(0,(P-D))/P*100}%;background:#ff3b3b">${P-D>=1.5?'危険':''}</span>`;
+     `<span style="width:${D/P*100}%;background:#00ff9f">${D>=1.5?'ふつう '+D.toFixed(1)+'h':''}</span>`
+    +`<span style="width:${Math.max(0,P-D)/P*100}%;background:#f9f002">${P-D>=1.5?'少し危険':''}</span>`;
   document.getElementById('dayCalc').innerHTML=
-    `🟢 〜${G.toFixed(1)}h　🟡 ${G.toFixed(1)}h超え　🔴 <b>${D.toFixed(1)}h超え</b>　／ 1日の上限 ${P.toFixed(1)}h`;
-  document.getElementById('budPerDay').value=(state.budget/CD()).toFixed(1);
-  document.getElementById('budVal').innerHTML=`× ${CD()}日 ＝ <b>${state.budget.toFixed(1)}h</b>`;
+    `🟢 〜${D.toFixed(1)}h　🟡 <b>${D.toFixed(1)}h超え</b>（少し危険）　🔴 ${P.toFixed(1)}h超え`;
+  document.getElementById('dangerCalc').innerHTML=
+    `× ${CD()}日 ＝ <b>${(D*CD()).toFixed(1)}h</b>　← 配分の合計はこのくらいが目安`;
   const sum=goalSum(), free=state.budget-sum, den=Math.max(state.budget,sum);
   document.getElementById('budStack').innerHTML=
     CATS.filter(c=>goalOf(c.n)>0).map(c=>`<span style="width:${goalOf(c.n)/den*100}%;background:${c.c}" title="${c.n} ${goalOf(c.n)}h"></span>`).join('')
@@ -1386,16 +1389,21 @@ function applyPreset(){
 if(typeof state.dayDanger!=='number')state.dayDanger=(typeof state.dayLimit==='number'?state.dayLimit:9);
 if(typeof state.dayBuffer!=='number')state.dayBuffer=3;
 delete state.dayLimit;
-const perDay=()=>state.budget/CD();
-const greenLine=()=>Math.max(0,perDay()-state.dayBuffer);
-const dayCap=()=>perDay();
-function daySig(h){ return h>state.dayDanger?'r':(h>greenLine()?'y':'g'); }
+if(typeof state.sleep!=='number')state.sleep=7;
+/* 1日に振り分ける時間 ＝ 24h − 睡眠 − 余裕。飯・風呂・移動はここから引かない
+   （それらは記録側の「生活・その他」で拾う／拾わないは自由）。 */
+const perDay=()=>Math.max(1,24-state.sleep-state.dayBuffer);
+function syncBudget(){ state.budget=Math.round(perDay()*CD()*2)/2; }
+function daySig(h){ return h>perDay()?'r':(h>state.dayDanger?'y':'g'); }
 function bumpDay(k,d){
   let v=Math.round((state[k]+d)*2)/2;
-  if(k==='dayBuffer')v=Math.max(0,Math.min(perDay(),v));
-  else v=Math.max(0.5,Math.min(perDay(),v));          // 危険ラインは1日の上限を超えられない
-  state[k]=v; save();
-  renderGoal(); renderHUD(); renderDayWarn();
+  if(k==='sleep')          v=Math.max(0,Math.min(16,v));
+  else if(k==='dayBuffer') v=Math.max(0,Math.min(24-state.sleep-1,v));
+  else                     v=Math.max(0.5,v);
+  state[k]=v;
+  syncBudget();
+  if(state.dayDanger>perDay())state.dayDanger=perDay();
+  save(); renderGoal(); renderHUD(); renderDayWarn();
   if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
 }
 function dayHours(ds){ return state.records.reduce((a,r)=>a+(r.date===ds?r.hours:0),0); }
@@ -1406,13 +1414,13 @@ function renderDayWarn(){
   const base=dayHours(selDate);
   const pend=pendingSchedules.filter(p=>!p.recorded);
   const add=pend.length?pend.reduce((a,p)=>a+p.hours,0):Math.max(0,selEnd-selStart);
-  const after=base+add, sig=daySig(after), P=perDay(), G=greenLine(), D=state.dayDanger;
+  const after=base+add, sig=daySig(after), P=perDay(), D=state.dayDanger, G=D;
   const scale=Math.max(P,after);
   el.className='daywarn '+sig;
   let msg;
-  if(sig==='g')      msg=`今日 <b>${base.toFixed(1)}h</b> → 入れると <b>${after.toFixed(1)}h</b><span class="sub">余裕 ${state.dayBuffer}h を残せるのは ${G.toFixed(1)}h まで（あと ${(G-after).toFixed(1)}h）</span>`;
-  else if(sig==='y') msg=`🟡 入れると今日 <b>${after.toFixed(1)}h</b>。あけておきたい余裕を <b>${(after-G).toFixed(1)}h</b> 食う<span class="sub">危険ライン ${D.toFixed(1)}h まで あと ${(D-after).toFixed(1)}h</span>`;
-  else               msg=`🔴 入れると今日 <b>${after.toFixed(1)}h</b>。危険ライン ${D.toFixed(1)}h を <b>${(after-D).toFixed(1)}h</b> 超える<span class="sub">${after>P?`1日に回せる ${P.toFixed(1)}h からも ${(after-P).toFixed(1)}h ハミ出てる`:`残りは ${(P-after).toFixed(1)}h しかない`}</span>`;
+  if(sig==='g')      msg=`今日 <b>${base.toFixed(1)}h</b> → 入れると <b>${after.toFixed(1)}h</b><span class="sub">危険ライン ${D.toFixed(1)}h まで あと ${(D-after).toFixed(1)}h</span>`;
+  else if(sig==='y') msg=`🟡 入れると今日 <b>${after.toFixed(1)}h</b>。危険ライン ${D.toFixed(1)}h を <b>${(after-D).toFixed(1)}h</b> 超える<span class="sub">1日に振り分けた ${P.toFixed(1)}h のうち 残り ${(P-after).toFixed(1)}h</span>`;
+  else               msg=`🔴 入れると今日 <b>${after.toFixed(1)}h</b>。1日に振り分けた ${P.toFixed(1)}h を <b>${(after-P).toFixed(1)}h</b> 超える<span class="sub">睡眠 ${state.sleep}h か 余裕 ${state.dayBuffer}h が削られてる</span>`;
   el.innerHTML=msg+`<div class="dayline">
       <i style="width:${Math.min(100,base/scale*100)}%;background:var(--cyan);color:var(--cyan);opacity:.55"></i>
       <i style="left:${Math.min(100,base/scale*100)}%;width:${Math.min(100-base/scale*100,add/scale*100)}%;background:${sig==='r'?'#ff3b3b':sig==='y'?'#f9f002':'#00ff9f'};color:${sig==='r'?'#ff3b3b':sig==='y'?'#f9f002':'#00ff9f'}"></i>
