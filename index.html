@@ -115,6 +115,7 @@
   /* week view */
   .wknav{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px}
   .wknav button{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:10px 14px; font-size:16px; cursor:pointer; min-height:44px}
+  .wknav button:disabled{opacity:.25; cursor:not-allowed}
   .calendar-sync{width:100%; padding:11px; margin-bottom:12px; background:transparent; border:1px solid var(--cyan); color:var(--cyan); font-weight:800; cursor:pointer; font-family:inherit}
   .calendar-sync:disabled{opacity:.55; cursor:wait}
   .wklabel{font-family:"Courier New",monospace; font-size:15px; color:var(--cyan); text-shadow:var(--glow); font-weight:700}
@@ -148,6 +149,60 @@
   .modal .row button{flex:1; padding:12px; font-weight:800; cursor:pointer; font-family:inherit; border:1px solid var(--line); background:var(--panel2); color:var(--text)}
   .modal .row button.primary{background:var(--cyan); border:none; color:#03121a}
   .hint{font-size:11px; color:var(--dim); line-height:1.6; margin-top:8px}
+  /* ===== めやす / 信号 / 答え合わせ ===== */
+  .sig{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; flex:none; background:#2a3559}
+  .sig.g{background:#00ff9f; box-shadow:0 0 7px #00ff9f}
+  .sig.y{background:#f9f002; box-shadow:0 0 9px #f9f002; animation:blink 1.1s infinite}
+  .sig.r{background:#ff3b3b; box-shadow:0 0 11px #ff3b3b; animation:blink .6s infinite}
+  .sig.l{background:#2a3559}
+  @keyframes blink{0%,60%{opacity:1}80%,100%{opacity:.28}}
+  .totrow .nm{display:flex; align-items:center; gap:0; font-size:11.5px; white-space:nowrap; overflow:hidden}
+  .totrow .nm>span:last-child{overflow:hidden; text-overflow:ellipsis}
+  .totrow .barwrap{position:relative}
+  .totrow .capline{position:absolute; top:-2px; bottom:-2px; width:0; border-left:2px dashed #fff; opacity:.75; z-index:3}
+  .totrow .hh{width:74px}
+  .totrow .hh i{font-style:normal; opacity:.5}
+  /* HUD */
+  .hud{display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:#0a1024; border:1px solid var(--line); padding:9px 11px; margin-bottom:12px; font:12px "Courier New",monospace}
+  .hud .hv{color:var(--cyan); font-weight:900; font-size:14px}
+  .hud .lamps{margin-left:auto; display:flex; gap:5px; align-items:center}
+  /* 答え合わせバナー */
+  .ckbanner{width:100%; display:flex; align-items:center; gap:10px; padding:13px; margin-bottom:12px; cursor:pointer; font-family:inherit; font-size:14px; font-weight:800;
+    background:linear-gradient(100deg,rgba(249,240,2,.10),rgba(255,46,151,.10)); border:1px solid #f9f002; color:#f9f002;
+    box-shadow:0 0 10px rgba(249,240,2,.28), inset 0 0 16px rgba(249,240,2,.06); animation:blink 1.7s infinite}
+  .ckbanner .n{margin-left:auto; background:#f9f002; color:#0a1024; border-radius:10px; padding:1px 8px; font-size:12px; font-weight:900}
+  /* めやす */
+  .budrow{display:flex; align-items:center; gap:12px; justify-content:center; margin-bottom:12px}
+  .budrow button{width:52px; height:52px; font-size:26px; font-weight:900; background:var(--panel2); border:1px solid var(--cyan); color:var(--cyan); cursor:pointer; box-shadow:var(--glow)}
+  .budval{font-family:"Courier New",monospace; font-size:30px; font-weight:900; color:var(--cyan); text-shadow:var(--glow); min-width:110px; text-align:center}
+  .stack{display:flex; height:26px; border:1px solid var(--line); background:#0a1024; overflow:hidden; margin-bottom:7px}
+  .stack span{height:100%; box-shadow:inset 0 0 8px rgba(0,0,0,.4)}
+  .stack .free{background:repeating-linear-gradient(45deg,#141c36,#141c36 5px,#0d1428 5px,#0d1428 10px)}
+  .freeline{font:12px "Courier New",monospace; color:var(--dim); text-align:right}
+  .freeline b{color:var(--cyan)}
+  .freeline.over b{color:#ff3b3b}
+  .goalrow{display:flex; align-items:center; gap:8px; padding:7px 0; border-top:1px solid rgba(36,58,99,.5)}
+  .goalrow .gn{flex:1; font-size:13px; font-weight:800; display:flex; align-items:center; gap:6px; min-width:0}
+  .goalrow .gn em{font-style:normal; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .goalrow button{width:38px; height:38px; font-size:19px; font-weight:900; background:var(--panel2); border:1px solid var(--line); color:var(--text); cursor:pointer; flex:none}
+  .goalrow .gv{width:56px; text-align:center; font-family:"Courier New",monospace; font-size:16px; font-weight:900; flex:none}
+  .goalrow .gp{width:44px; text-align:right; font:10px "Courier New",monospace; color:var(--dim); flex:none}
+  /* 答え合わせ本体 */
+  .ckhead{display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; margin-bottom:4px}
+  .ckkind{font-size:17px; font-weight:900; color:var(--cyan); text-shadow:var(--glow)}
+  .ckrange{font:11px "Courier New",monospace; color:var(--dim)}
+  .ckstat{font:11px "Courier New",monospace; color:var(--dim); margin-bottom:11px}
+  .ckmsg{font-size:13px; line-height:1.7; padding:11px; margin:11px 0; background:#0a1024; border-left:3px solid var(--dim)}
+  .ckmsg.ok{border-color:#00ff9f} .ckmsg.warn{border-color:#f9f002} .ckmsg.bad{border-color:#ff3b3b}
+  .ckmsg b{font-weight:900}
+  .modal.wide{max-width:520px; max-height:88vh; overflow:auto}
+  .modal textarea{width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:11px; font-size:14px; font-family:inherit; min-height:64px; margin-bottom:10px; resize:vertical}
+  .cklist .cki{display:flex; align-items:center; gap:9px; padding:10px 2px; border-top:1px solid rgba(36,58,99,.5); font-size:13px; cursor:pointer}
+  .cklist .cki .k{font-weight:900; color:var(--cyan); flex:none; width:78px}
+  .cklist .cki .d{font:11px "Courier New",monospace; color:var(--dim); flex:1}
+  .cklist .cki .go{color:#f9f002; font-weight:900; flex:none}
+  .cklist .cki.done .k{color:var(--dim)} .cklist .cki.done .go{color:var(--dim); font-weight:400}
+  .tabs button .bdg{display:inline-block; min-width:17px; margin-left:5px; background:#f9f002; color:#0a1024; border-radius:9px; font-size:11px; font-weight:900; padding:0 4px}
   .hide{display:none!important}
 </style>
 </head>
@@ -158,10 +213,14 @@
 
 <div class="tabs">
   <button id="tabRec" class="active" onclick="switchTab('rec')">きろく</button>
-  <button id="tabWk" onclick="switchTab('wk')">ふりかえり</button>
+  <button id="tabWk" onclick="switchTab('wk')">ふりかえり<span id="tabWkBdg" class="bdg hide">0</span></button>
+  <button id="tabGoal" onclick="switchTab('goal')">めやす</button>
 </div>
 
 <!-- 記録 -->
+<button class="ckbanner hide" id="ckBanner" onclick="openNextCk()"></button>
+<div class="hud" id="hud"></div>
+
 <div id="viewRec">
   <div class="card">
     <span class="lbl">📅 いつのこと？（過去〜今日）</span>
@@ -208,11 +267,12 @@
   <div class="wknav">
     <button onclick="moveWeek(-1)">‹</button>
     <div class="wklabel" id="wkLabel"></div>
-    <button onclick="moveWeek(1)">›</button>
+    <button id="wkNext" onclick="moveWeek(1)">›</button>
   </div>
   <div class="card">
-    <span class="lbl">📊 カテゴリごとの時間（重複OK・偏りを見る用）</span>
+    <span class="lbl">📊 この週の信号（実績 / 枠。白い破線が枠のライン）</span>
     <div id="totals"></div>
+    <div class="ckmsg" id="wkMsg"></div>
   </div>
   <div class="card">
     <span class="lbl">🗓️ この週の記録</span>
@@ -225,6 +285,39 @@
 </div>
 
 <!-- 設定 -->
+<div id="viewGoal" class="hide">
+  <div class="card">
+    <span class="lbl">1週間に使える総枠（起きて何かに使う時間）</span>
+    <div class="budrow">
+      <button onclick="bumpBudget(-5)">−</button>
+      <div class="budval" id="budVal">70h</div>
+      <button onclick="bumpBudget(5)">＋</button>
+    </div>
+    <div class="stack" id="budStack"></div>
+    <div class="freeline" id="budFree"></div>
+    <div class="hint">ここが有限だから「取り合い」になる。総枠を大きくしても1日は伸びないので、実感に近い数字にしておくのがコツ。</div>
+  </div>
+
+  <div class="card">
+    <span class="lbl">カテゴリごとの週の枠（＝ここまでは使っていい上限）</span>
+    <div id="goalRows"></div>
+    <div class="hint">これは「やれ」じゃなくて「ここまでなら他を潰さない」ライン。<br>
+      実績が枠の8割で🟡＝ここから先は他の枠を削り始める。枠を超えたら🔴＝もう削ってる。</div>
+  </div>
+
+  <div class="card">
+    <span class="lbl">答え合わせの履歴</span>
+    <div class="cklist" id="ckList"></div>
+    <div class="hint">週を <b>前半3日（日月火）</b> と <b>後半4日（水木金土）</b> に割って答え合わせ。さらに1週間、1ヶ月。<br>期間が終わってから初めて出てくる（未来には出ない）。</div>
+  </div>
+</div>
+
+<div class="overlay" id="ckOverlay" onclick="if(event.target===this)closeCk()">
+  <div class="modal wide">
+    <div id="ckBody"></div>
+  </div>
+</div>
+
 <div class="overlay" id="setOverlay" onclick="if(event.target===this)closeSet()">
   <div class="modal">
     <h3>⚙️ 設定（Googleカレンダー連携）</h3>
@@ -259,6 +352,12 @@ const catIcon=n=>{ const x=CATS.find(c=>c.n===n); return x&&x.i?x.i:''; };
 function load(){ try{ const o=JSON.parse(localStorage.getItem(KEY)); if(o&&o.records) return o; }catch(e){} return {records:[], feels:{}}; }
 function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 let state=load();
+/* ===== 目標＝週の「枠」。ノルマではなく予算。 ===== */
+const DEFAULT_GOALS={'仕事':20,'撮影編集':6,'研究・プログラミング':12,'3Dプリンター工作':4,'ダンス':6,'出会い':3,'人と会う・イベント':4,'生活・その他':10};
+if(!state.goals)state.goals={};
+if(typeof state.budget!=='number')state.budget=70;
+if(!state.checks)state.checks={};
+CATS.forEach(c=>{ if(typeof state.goals[c.n]!=='number')state.goals[c.n]=DEFAULT_GOALS[c.n]||0; });
 // 疎通確認用イベントは実際の記録・集計には含めない。
 const beforeTestCleanup=state.records.length;
 state.records=state.records.filter(r=>r.id!=='test');
@@ -477,7 +576,7 @@ function record(){
   sfxRec();
   toast(recs.length+'件記録した！');
   recs.forEach(syncOne);  // 裏でGASへ
-  updateUnsync();
+  updateUnsync(); renderHUD(); updateCkBanner();
 }
 function toggleEditRecorded(i){
   const p=pendingSchedules[i]; if(!p||!p.recorded)return;
@@ -566,6 +665,7 @@ async function importCalendarRecords(showMessage){
       else { state.records.push({...r,synced:true,ts:r.ts||Date.now()}); byId.set(r.id,r); added++; }
     });
     state.records.sort((a,b)=>(a.ts||0)-(b.ts||0)); save(); updateUnsync();
+    renderHUD(); updateCkBanner(); renderCkList();
     if(!document.getElementById('viewWk').classList.contains('hide'))renderWeek();
     if(showMessage)toast(added?`${added}件をカレンダーから復元した`:`カレンダーと同期済み（${updated}件）`);
   }catch(e){ if(showMessage)toast('読み込みできません。GASを再デプロイしてね'); }
@@ -574,7 +674,11 @@ async function importCalendarRecords(showMessage){
 
 /* ============ ふりかえりタブ ============ */
 let wkStart=startOfWeek(new Date());
-function moveWeek(n){ wkStart=addDays(wkStart,7*n); renderWeek(); }
+function moveWeek(n){
+  const nx=addDays(wkStart,7*n);
+  if(iso(nx)>todayStr()){ toast('未来はまだ無いよ'); return; }   // 未来にカレンダーは置かない
+  wkStart=nx; renderWeek();
+}
 function weekKey(){ return 'w:'+iso(wkStart); }
 function renderWeek(){
   const we=addDays(wkStart,6);
@@ -584,14 +688,11 @@ function renderWeek(){
   // カテゴリ合計（重複カウントOK）
   const tot={}; CATS.forEach(c=>tot[c.n]=0);
   recs.forEach(r=>r.cats.forEach(c=>{ tot[c]=(tot[c]||0)+r.hours; }));
-  const max=Math.max(1,...Object.values(tot));
-  const t=document.getElementById('totals');
-  const any=Object.values(tot).some(v=>v>0);
-  t.innerHTML = any ? CATS.filter(c=>tot[c.n]>0).map(c=>`
-    <div class="totrow"><div class="nm" style="color:${c.c}">${c.i||''} ${c.n}</div>
-    <div class="barwrap"><div class="bar" style="width:${tot[c.n]/max*100}%;background:${c.c};color:${c.c}"></div></div>
-    <div class="hh">${tot[c.n].toFixed(1)}h</div></div>`).join('')
-    : '<div class="empty">この週はまだ記録が無いよ</div>';
+  const caps={}; CATS.forEach(c=>caps[c.n]=goalOf(c.n));
+  document.getElementById('totals').innerHTML=renderTotals(tot,caps);
+  const cm=conflictMsg(tot,caps);
+  document.getElementById('wkMsg').className='ckmsg '+cm.cls;
+  document.getElementById('wkMsg').innerHTML=cm.html;
   // 日ごと
   const d=document.getElementById('days'); let html='';
   for(let i=0;i<7;i++){
@@ -629,10 +730,11 @@ function renderWeek(){
   }
   d.innerHTML=html;
   document.getElementById('feel').value=state.feels[weekKey()]||'';
+  document.getElementById('wkNext').disabled = iso(addDays(wkStart,7))>todayStr();
 }
 function removeRecordById(id){
   const rec=state.records.find(r=>r.id===id); if(!rec)return null;
-  state.records=state.records.filter(r=>r.id!==id); save(); updateUnsync();
+  state.records=state.records.filter(r=>r.id!==id); save(); updateUnsync(); renderHUD(); updateCkBanner();
   const gas=localStorage.getItem(GKEY);
   if(gas)fetch(gas,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'delete',id:rec.id,date:rec.date})}).catch(()=>{});
   return rec;
@@ -649,9 +751,13 @@ function escAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
 function switchTab(t){
   document.getElementById('viewRec').classList.toggle('hide',t!=='rec');
   document.getElementById('viewWk').classList.toggle('hide',t!=='wk');
+  document.getElementById('viewGoal').classList.toggle('hide',t!=='goal');
   document.getElementById('tabRec').classList.toggle('active',t==='rec');
   document.getElementById('tabWk').classList.toggle('active',t==='wk');
+  document.getElementById('tabGoal').classList.toggle('active',t==='goal');
   if(t==='wk'){ wkStart=startOfWeek(new Date()); renderWeek(); }
+  if(t==='goal'){ renderGoal(); }
+  renderHUD();
 }
 let toastT=null;
 function toast(m){ const el=document.getElementById('toast'); el.textContent=m; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),1600); }
@@ -671,6 +777,196 @@ document.addEventListener('keydown',e=>{
   e.preventDefault(); e.shiftKey?redoSchedule():undoSchedule();
 });
 
+/* ==================================================================
+   めやす（週の枠）・信号・答え合わせ
+   考え方：週に使える時間は有限。カテゴリの目標は「取り分」であって
+   ノルマではない。使いすぎ＝他のやりたいことの枠を食っている。
+   ================================================================== */
+function goalOf(n){ return Number(state.goals[n])||0; }
+function goalSum(){ return CATS.reduce((a,c)=>a+goalOf(c.n),0); }
+/* 期間の長さ（日数）に応じた枠 */
+function capsFor(days){ const o={}; CATS.forEach(c=>o[c.n]=goalOf(c.n)*days/7); return o; }
+/* 信号：l=まだ余裕/未設定, g=順調, y=枠の8割（ここから他を削る）, r=枠超え */
+function sigOf(a,g){ if(g<=0)return a>0?'l':'l'; const r=a/g; return r>1?'r':(r>=0.8?'y':(r>=0.25?'g':'l')); }
+
+function sumRange(from,to){
+  const tot={}; CATS.forEach(c=>tot[c.n]=0);
+  let count=0; const days=new Set(); let total=0;
+  state.records.forEach(r=>{
+    if(r.date>=from&&r.date<=to){ count++; days.add(r.date); total+=r.hours;
+      (r.cats||[]).forEach(c=>tot[c]=(tot[c]||0)+r.hours); }
+  });
+  return {tot,count,days:days.size,total};
+}
+
+function renderTotals(tot,caps){
+  const rows=CATS.filter(c=>(tot[c.n]||0)>0||(caps[c.n]||0)>0);
+  if(!rows.length)return '<div class="empty">この期間はまだ記録が無いよ</div>';
+  const scale=Math.max(1,...rows.map(c=>Math.max(tot[c.n]||0,caps[c.n]||0)));
+  return rows.map(c=>{
+    const a=tot[c.n]||0,g=caps[c.n]||0,sg=sigOf(a,g);
+    return `<div class="totrow">
+      <div class="nm" style="color:${c.c}"><span class="sig ${sg}"></span><span>${c.i||''} ${c.n}</span></div>
+      <div class="barwrap">
+        <div class="bar" style="width:${Math.min(100,a/scale*100)}%;background:${c.c};color:${c.c}"></div>
+        ${g>0?`<span class="capline" style="left:${Math.min(100,g/scale*100)}%"></span>`:''}
+      </div>
+      <div class="hh">${a.toFixed(1)}<i>/${g>0?g.toFixed(1):'—'}</i></div></div>`;
+  }).join('');
+}
+
+/* 超過分が「誰の時間を食ったか」を按分して名指しする＝競合サイン */
+function conflictMsg(tot,caps){
+  const over=[],slack=[],near=[];
+  CATS.forEach(c=>{
+    const g=caps[c.n]||0; if(g<=0)return; const a=tot[c.n]||0;
+    if(a>g)over.push({n:c.n,c:c.c,x:a-g});
+    else { if(a/g>=0.8)near.push({n:c.n,c:c.c,x:g-a}); slack.push({n:c.n,c:c.c,x:g-a}); }
+  });
+  const tint=(o)=>`<b style="color:${o.c}">${o.n}</b>`;
+  if(!over.length){
+    if(near.length)return {cls:'warn',html:'🟡 '+near.map(tint).join('・')+' がもう枠の8割。<br>ここから先は、他にやりたかったことの枠を削り始めるよ。'};
+    return {cls:'ok',html:'🟢 全部が枠の中。取り合いは起きてない。ここは好きに伸ばしていい。'};
+  }
+  over.sort((a,b)=>b.x-a.x);
+  const X=over.reduce((t,o)=>t+o.x,0);
+  const S=slack.reduce((t,o)=>t+o.x,0);
+  let h='🔴 '+over.map(o=>`${tint(o)} が枠より <b>+${o.x.toFixed(1)}h</b>`).join('、')+'。<br>';
+  if(S<=0.05){ h+=`そのぶんの <b>${X.toFixed(1)}h</b> は、枠を決めてない場所か睡眠から出てる。`; }
+  else{
+    const eaten=Math.min(X,S);
+    const list=slack.slice().sort((a,b)=>b.x-a.x).filter(o=>o.x>0.05).slice(0,3)
+      .map(o=>`${tint(o)} −${(eaten*o.x/S).toFixed(1)}h`).join(' ／ ');
+    h+=`そのぶん、だいたい ${list} がやれてない。`;
+    if(X>S)h+=`<br>さらに <b>${(X-S).toFixed(1)}h</b> は週の総枠からもハミ出てる。`;
+  }
+  return {cls:'bad',html:h};
+}
+
+/* ---------- HUD（今日どれだけ進んだか） ---------- */
+function renderHUD(){
+  const el=document.getElementById('hud'); if(!el)return;
+  const t=todayStr();
+  const ws=startOfWeek(new Date());
+  const wk=sumRange(iso(ws),iso(addDays(ws,6)));
+  const td=sumRange(t,t);
+  const caps={}; CATS.forEach(c=>caps[c.n]=goalOf(c.n));
+  const lamps=CATS.filter(c=>goalOf(c.n)>0).map(c=>{
+    const sg=sigOf(wk.tot[c.n]||0,caps[c.n]);
+    return `<span class="sig ${sg}" title="${c.n} ${(wk.tot[c.n]||0).toFixed(1)}h / ${caps[c.n].toFixed(0)}h"></span>`;
+  }).join('');
+  el.innerHTML=`今日 <span class="hv">${td.total.toFixed(1)}h</span>　今週 <span class="hv">${wk.total.toFixed(1)}h</span> / ${state.budget}h　<span style="color:var(--dim)">手数 ${wk.count}</span><span class="lamps">${lamps}</span>`;
+}
+
+/* ---------- めやすタブ ---------- */
+function bumpBudget(n){ state.budget=Math.max(10,Math.min(140,state.budget+n)); save(); renderGoal(); renderHUD(); }
+function bumpGoal(n,d){
+  state.goals[n]=Math.max(0,Math.round((goalOf(n)+d)*2)/2);
+  save(); renderGoal(); renderHUD();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderWeek();
+}
+function renderGoal(){
+  document.getElementById('budVal').textContent=state.budget+'h';
+  const sum=goalSum(), free=state.budget-sum, den=Math.max(state.budget,sum);
+  document.getElementById('budStack').innerHTML=
+    CATS.filter(c=>goalOf(c.n)>0).map(c=>`<span style="width:${goalOf(c.n)/den*100}%;background:${c.c}" title="${c.n} ${goalOf(c.n)}h"></span>`).join('')
+    + (free>0?`<span class="free" style="width:${free/den*100}%"></span>`:'');
+  const fl=document.getElementById('budFree');
+  fl.className='freeline'+(free<0?' over':'');
+  fl.innerHTML = free>=0
+    ? `割り当て ${sum.toFixed(1)}h ／ 余白 <b>${free.toFixed(1)}h</b>`
+    : `割り当て ${sum.toFixed(1)}h ／ <b>総枠を ${(-free).toFixed(1)}h オーバー</b>（どれか削らないと全部は入らない）`;
+  document.getElementById('goalRows').innerHTML=CATS.map(c=>{
+    const g=goalOf(c.n);
+    return `<div class="goalrow">
+      <div class="gn" style="color:${c.c}"><span class="sig" style="background:${c.c};box-shadow:0 0 7px ${c.c}"></span><em>${c.i||''} ${c.n}</em></div>
+      <div class="gp">${sum>0?Math.round(g/Math.max(sum,state.budget)*100):0}%</div>
+      <button onclick="bumpGoal('${c.n}',-0.5)">−</button>
+      <div class="gv" style="color:${g>0?c.c:'var(--dim)'}">${g.toFixed(1)}</div>
+      <button onclick="bumpGoal('${c.n}',0.5)">＋</button></div>`;
+  }).join('');
+  renderCkList();
+}
+
+/* ---------- 答え合わせ（チェックポイント） ---------- */
+const CK_LABEL={segA:'前半3日',segB:'後半4日',week:'1週間',month:'1ヶ月'};
+function firstRecDate(){ let m=null; state.records.forEach(r=>{ if(!m||r.date<m)m=r.date; }); return m; }
+function fmtD(ds){ const d=new Date(ds+'T00:00:00'); return ds.slice(5).replace('-','/')+'('+DOW[d.getDay()]+')'; }
+function allChecks(){
+  const out=[],fr=firstRecDate(); if(!fr)return out;
+  const today=todayStr();
+  let ws=startOfWeek(new Date(fr+'T00:00:00')),guard=0;
+  while(iso(ws)<=today&&guard++<400){
+    const a0=iso(ws);
+    if(iso(addDays(ws,3))<=today)out.push({id:'A'+a0,kind:'segA',from:a0,to:iso(addDays(ws,2)),days:3});
+    if(iso(addDays(ws,7))<=today){
+      out.push({id:'B'+a0,kind:'segB',from:iso(addDays(ws,3)),to:iso(addDays(ws,6)),days:4});
+      out.push({id:'W'+a0,kind:'week',from:a0,to:iso(addDays(ws,6)),days:7});
+    }
+    ws=addDays(ws,7);
+  }
+  let d=new Date(fr.slice(0,7)+'-01T00:00:00');
+  for(let i=0;i<80;i++){
+    const y=d.getFullYear(),m=d.getMonth(),last=new Date(y,m+1,0);
+    if(iso(last)>=today)break;
+    out.push({id:'M'+iso(d).slice(0,7),kind:'month',from:iso(d),to:iso(last),days:last.getDate()});
+    d=new Date(y,m+1,1);
+  }
+  out.sort((a,b)=>a.to<b.to?1:(a.to>b.to?-1:0));   // 新しい順
+  return out;
+}
+function pendingChecks(){ return allChecks().filter(c=>!state.checks[c.id]); }
+function updateCkBanner(){
+  const pend=pendingChecks(),el=document.getElementById('ckBanner'),bd=document.getElementById('tabWkBdg');
+  bd.classList.toggle('hide',pend.length===0); bd.textContent=pend.length;
+  if(!pend.length){ el.classList.add('hide'); return; }
+  const c=pend[0];
+  el.classList.remove('hide');
+  el.innerHTML=`▶ 答え合わせが届いてる：<span style="color:var(--text)">${CK_LABEL[c.kind]}（${fmtD(c.from)}〜${fmtD(c.to)}）</span>`
+    +(pend.length>1?`<span class="n">${pend.length}</span>`:'');
+}
+let curCk=null;
+function openNextCk(){ const p=pendingChecks(); if(p.length)openCk(p[0].id); }
+function openCk(id){
+  const c=allChecks().find(x=>x.id===id); if(!c)return;
+  curCk=c;
+  const {tot,count,days,total}=sumRange(c.from,c.to);
+  const caps=capsFor(c.days);
+  const msg=conflictMsg(tot,caps);
+  const saved=state.checks[c.id];
+  document.getElementById('ckBody').innerHTML=`
+    <div class="ckhead"><div class="ckkind">答え合わせ ／ ${CK_LABEL[c.kind]}</div>
+      <div class="ckrange">${fmtD(c.from)} 〜 ${fmtD(c.to)}　${c.days}日間</div></div>
+    <div class="ckstat">合計 ${total.toFixed(1)}h ／ 記録した日 ${days}/${c.days}日 ／ ${count}件　（この期間の枠＝週の枠 × ${c.days}/7）</div>
+    ${renderTotals(tot,caps)}
+    <div class="ckmsg ${msg.cls}">${msg.html}</div>
+    <textarea id="ckNote" placeholder="気づいたこと（空でもOK）">${esc(saved&&saved.note||'')}</textarea>
+    <div class="row">
+      <button onclick="closeCk()">あとで</button>
+      <button class="primary" onclick="doneCk()">${saved?'保存する':'答え合わせ完了'}</button>
+    </div>`;
+  document.getElementById('ckOverlay').classList.add('show');
+  sfxDecide();
+}
+function closeCk(){ document.getElementById('ckOverlay').classList.remove('show'); curCk=null; }
+function doneCk(){
+  if(!curCk)return closeCk();
+  state.checks[curCk.id]={note:document.getElementById('ckNote').value.trim(),at:Date.now()};
+  save(); closeCk(); updateCkBanner(); renderCkList(); sfxRec(); toast('答え合わせ完了！');
+}
+function renderCkList(){
+  const el=document.getElementById('ckList'); if(!el)return;
+  const all=allChecks().slice(0,24);
+  if(!all.length){ el.innerHTML='<div class="empty">記録が溜まると、期間が終わったぶんから出てくるよ</div>'; return; }
+  el.innerHTML=all.map(c=>{
+    const done=!!state.checks[c.id];
+    return `<div class="cki${done?' done':''}" onclick="openCk('${c.id}')">
+      <div class="k">${CK_LABEL[c.kind]}</div>
+      <div class="d">${fmtD(c.from)} 〜 ${fmtD(c.to)}</div>
+      <div class="go">${done?'済':'▶ 開く'}</div></div>`;
+  }).join('');
+}
+
 /* 設定 */
 function openSet(){ document.getElementById('fGas').value=localStorage.getItem(GKEY)||''; document.getElementById('setMsg').textContent=''; document.getElementById('setOverlay').classList.add('show'); }
 function closeSet(){ document.getElementById('setOverlay').classList.remove('show'); }
@@ -685,7 +981,9 @@ function testGas(){
 }
 
 /* 起動 */
-renderCats(); renderDrafts(); syncDateUI(); updateUnsync(); initTL(); renderTL(); importCalendarRecords(false);
+renderCats(); renderDrafts(); syncDateUI(); updateUnsync(); initTL(); renderTL();
+renderHUD(); updateCkBanner(); renderCkList();
+importCalendarRecords(false);
 /* Service Worker 登録（PWA / オフライン） */
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
 </script>
