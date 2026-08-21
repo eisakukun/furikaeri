@@ -93,8 +93,12 @@ function doPost(e) {
         : cal.createAllDayEvent(title, day, { description: desc });
     }
 
-    // 代表色 = 先頭カテゴリの色
-    if (cats.length) ev.setColor(colorFor(cats[0]));
+    // 代表色：アプリが送ってきた色名を優先（種類を自由に増やせるように）。
+    // 'DEFAULT' はカレンダー既定色＝色を付けない、の意味。
+    var col = d.color && CalendarApp.EventColor[d.color] ? CalendarApp.EventColor[d.color]
+            : (cats.length ? colorFor(cats[0]) : null);
+    if (d.color === 'DEFAULT') { try { ev.setColor(null); } catch (e2) {} }
+    else if (col) ev.setColor(col);
 
     res.ok = true;
     res.action = found ? 'updated' : 'created';

@@ -1,7 +1,7 @@
 /* ふりかえり記録 — Service Worker（PWA / オフライン対応）
    方針：network-first。オンライン時は常に最新を取得（更新がすぐ反映）、
         オフライン時のみキャッシュから返す。 */
-const CACHE = 'furikaeri-v5';
+const CACHE = 'furikaeri-v6';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

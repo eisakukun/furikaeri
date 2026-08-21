@@ -203,6 +203,24 @@
   .cklist .cki .go{color:#f9f002; font-weight:900; flex:none}
   .cklist .cki.done .k{color:var(--dim)} .cklist .cki.done .go{color:var(--dim); font-weight:400}
   .tabs button .bdg{display:inline-block; min-width:17px; margin-left:5px; background:#f9f002; color:#0a1024; border-radius:9px; font-size:11px; font-weight:900; padding:0 4px}
+  /* タスクの種類エディタ */
+  .catedit{display:flex; align-items:center; gap:7px; padding:8px 0; border-top:1px solid rgba(36,58,99,.5)}
+  .catedit .emo{width:40px; height:40px; flex:none; text-align:center; font-size:19px; background:var(--panel2); border:1px solid var(--line); color:var(--text); font-family:inherit}
+  .catedit .nmi{flex:1; min-width:0; height:40px; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:0 9px; font-size:13px; font-weight:700; font-family:inherit}
+  .catedit .swatch{width:40px; height:40px; flex:none; border:1px solid var(--line); cursor:pointer; background:var(--panel2); padding:0}
+  .catedit .swatch i{display:block; width:100%; height:100%; box-shadow:inset 0 0 10px rgba(0,0,0,.5)}
+  .catedit .rm{width:34px; height:40px; flex:none; background:transparent; border:1px solid rgba(255,46,151,.4); color:var(--mag); font-size:16px; cursor:pointer}
+  .catedit .rm:disabled{opacity:.22; cursor:not-allowed}
+  .addcat{width:100%; margin-top:11px; padding:12px; background:transparent; border:1px dashed var(--cyan); color:var(--cyan); font-weight:800; cursor:pointer; font-family:inherit}
+  .addcat:disabled{opacity:.35; border-style:solid; border-color:var(--line); color:var(--dim); cursor:not-allowed}
+  .pal{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+  .pal button{height:52px; border:2px solid var(--line); background:var(--panel2); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-family:inherit; color:var(--dim); font-size:10px}
+  .pal button i{display:block; width:22px; height:22px; box-shadow:0 0 8px currentColor}
+  .pal button.on{border-color:var(--cyan); box-shadow:var(--glow)}
+  .pal button:disabled{opacity:.28; cursor:not-allowed}
+  .startrow{display:flex; align-items:center; gap:9px}
+  .startrow input[type=date]{flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:11px; font-size:15px; font-family:inherit; min-height:44px}
+  .prorate{font:11px "Courier New",monospace; color:#f9f002; margin-top:6px}
   .hide{display:none!important}
 </style>
 </head>
@@ -272,6 +290,7 @@
   <div class="card">
     <span class="lbl">📊 この週の信号（実績 / 枠。白い破線が枠のライン）</span>
     <div id="totals"></div>
+    <div class="prorate hide" id="wkProrate"></div>
     <div class="ckmsg" id="wkMsg"></div>
   </div>
   <div class="card">
@@ -306,10 +325,30 @@
   </div>
 
   <div class="card">
+    <span class="lbl">タスクの種類（<span id="catCount">8</span>/12）</span>
+    <div id="catRows"></div>
+    <button class="addcat" id="addCatBtn" onclick="addCat()">＋ 種類を追加</button>
+    <div class="hint">Googleカレンダーの予定色は<b>11色＋色なし＝12種類</b>が上限。だからここも12個まで。<br>
+      名前を変えると、過去の記録の名前も一緒に付け替わります。記録が1件でもある種類は消せません（名前変更で対応）。</div>
+  </div>
+
+  <div class="card">
+    <span class="lbl">答え合わせのスタート日</span>
+    <div class="startrow"><input type="date" id="startDate" onchange="setStartDate(this.value)"></div>
+    <div class="hint">この日より前の期間には答え合わせが出ません。<br>
+      スタート週は、残り日数ぶんに枠を割った額で判定します（週の途中から始めても赤くならない）。</div>
+  </div>
+
+  <div class="card">
     <span class="lbl">答え合わせの履歴</span>
     <div class="cklist" id="ckList"></div>
     <div class="hint">週を <b>前半3日（日月火）</b> と <b>後半4日（水木金土）</b> に割って答え合わせ。さらに1週間、1ヶ月。<br>期間が終わってから初めて出てくる（未来には出ない）。</div>
   </div>
+</div>
+
+<div class="overlay" id="palOverlay" onclick="if(event.target===this)closePal()">
+  <div class="modal"><h3>カレンダーの色をえらぶ</h3><div class="pal" id="palGrid"></div>
+  <div class="hint">Googleカレンダー上でこの色になります。同じ色は2つ使えません。</div></div>
 </div>
 
 <div class="overlay" id="ckOverlay" onclick="if(event.target===this)closeCk()">
@@ -335,18 +374,38 @@
 
 <script>
 /* ============ データ（localStorage一次データ / キーは jibun-furikaeri＝カレンダーのマネージャーが将来読めるように） ============ */
+function todayStr0(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 const KEY='jibun-furikaeri';
 const GKEY='furi-gas-url';
-const CATS=[
-  {n:'仕事',            c:'#ff3b3b', i:'💼'},
-  {n:'撮影編集',         c:'#00ff9f', i:'🎬'},
-  {n:'研究・プログラミング', c:'#b14bff', i:'💻'},
-  {n:'3Dプリンター工作',  c:'#00f0ff', i:'🖨️'},
-  {n:'ダンス',          c:'#ff2e97', i:'🕺'},
-  {n:'出会い',          c:'#ff6a00', i:'✨'},
-  {n:'人と会う・イベント', c:'#f9f002', i:'🎉'},
-  {n:'生活・その他',     c:'#8a93b0', i:'🏠'}
+/* Googleカレンダーの予定色は11色＋「色なし(既定)」＝12種類が上限。
+   だからタスクの種類も12個までしか作れない。g がカレンダー側の色名。 */
+const PALETTE=[
+  {g:'RED',        c:'#ff3b3b', jp:'赤'},
+  {g:'GREEN',      c:'#00ff9f', jp:'緑'},
+  {g:'MAUVE',      c:'#b14bff', jp:'紫'},
+  {g:'CYAN',       c:'#00f0ff', jp:'水'},
+  {g:'PALE_RED',   c:'#ff2e97', jp:'桃'},
+  {g:'ORANGE',     c:'#ff6a00', jp:'橙'},
+  {g:'YELLOW',     c:'#f9f002', jp:'黄'},
+  {g:'GRAY',       c:'#8a93b0', jp:'灰'},
+  {g:'BLUE',       c:'#3b6bff', jp:'青'},
+  {g:'PALE_GREEN', c:'#7dff5c', jp:'黄緑'},
+  {g:'PALE_BLUE',  c:'#7fd4ff', jp:'空'},
+  {g:'DEFAULT',    c:'#c77dff', jp:'既定'}
 ];
+const MAX_CATS=PALETTE.length;
+const DEFAULT_CATS=[
+  {n:'仕事',            c:'#ff3b3b', i:'💼', g:'RED'},
+  {n:'撮影編集',         c:'#00ff9f', i:'🎬', g:'GREEN'},
+  {n:'研究・プログラミング', c:'#b14bff', i:'💻', g:'MAUVE'},
+  {n:'3Dプリンター工作',  c:'#00f0ff', i:'🖨️', g:'CYAN'},
+  {n:'ダンス',          c:'#ff2e97', i:'🕺', g:'PALE_RED'},
+  {n:'出会い',          c:'#ff6a00', i:'✨', g:'ORANGE'},
+  {n:'人と会う・イベント', c:'#f9f002', i:'🎉', g:'YELLOW'},
+  {n:'生活・その他',     c:'#8a93b0', i:'🏠', g:'GRAY'}
+];
+let CATS=DEFAULT_CATS;
 const catColor=n=>{ const x=CATS.find(c=>c.n===n); return x?x.c:'#8a93b0'; };
 const catIcon=n=>{ const x=CATS.find(c=>c.n===n); return x&&x.i?x.i:''; };
 function load(){ try{ const o=JSON.parse(localStorage.getItem(KEY)); if(o&&o.records) return o; }catch(e){} return {records:[], feels:{}}; }
@@ -354,9 +413,15 @@ function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 let state=load();
 /* ===== 目標＝週の「枠」。ノルマではなく予算。 ===== */
 const DEFAULT_GOALS={'仕事':20,'撮影編集':6,'研究・プログラミング':12,'3Dプリンター工作':4,'ダンス':6,'出会い':3,'人と会う・イベント':4,'生活・その他':10};
+if(!Array.isArray(state.cats)||!state.cats.length)state.cats=JSON.parse(JSON.stringify(DEFAULT_CATS));
+state.cats.forEach((c,i)=>{ if(!c.g)c.g=(PALETTE[i]||PALETTE[PALETTE.length-1]).g;
+  const pl=PALETTE.find(p=>p.g===c.g); if(pl)c.c=pl.c; });
+CATS=state.cats;
 if(!state.goals)state.goals={};
 if(typeof state.budget!=='number')state.budget=70;
 if(!state.checks)state.checks={};
+/* 答え合わせを始める日。過去の記録を掘り返して未読を大量発生させない。 */
+if(!state.startDate)state.startDate=todayStr0();
 CATS.forEach(c=>{ if(typeof state.goals[c.n]!=='number')state.goals[c.n]=DEFAULT_GOALS[c.n]||0; });
 // 疎通確認用イベントは実際の記録・集計には含めない。
 const beforeTestCleanup=state.records.length;
@@ -368,12 +433,12 @@ const pad=n=>String(n).padStart(2,'0');
 const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const todayStr=()=>iso(new Date());
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-function startOfWeek(d){ return addDays(d,-d.getDay()); } // 日曜始まり
+function startOfWeek(d){ return addDays(d,-((d.getDay()+6)%7)); } // 月曜始まり
 const DOW=['日','月','火','水','木','金','土'];
 
 /* ============ 記録タブ ============ */
 let selDate=todayStr();
-let selCats=new Set(['仕事']);
+let selCats=new Set([CATS[0].n]);
 let selH=1.0;
 let selStart=9, selEnd=10;   // 時（0〜24）
 let pendingSchedules=[];
@@ -383,7 +448,7 @@ let undoStack=[], redoStack=[];
 function scheduleSnapshot(){ return JSON.stringify({pending:pendingSchedules,selected:selectedPendingIndex,start:selStart,end:selEnd,cats:[...selCats],title:document.getElementById('recTitle')?.value||'',memo:document.getElementById('memo')?.value||''}); }
 function pushScheduleHistory(){ undoStack.push(scheduleSnapshot()); if(undoStack.length>60)undoStack.shift(); redoStack=[]; }
 function restoreScheduleSnapshot(raw){
-  const s=JSON.parse(raw); pendingSchedules=s.pending||[]; selectedPendingIndex=Number.isInteger(s.selected)&&s.selected<pendingSchedules.length?s.selected:-1; selStart=s.start; selEnd=s.end; selCats=new Set(s.cats||['仕事']);
+  const s=JSON.parse(raw); pendingSchedules=s.pending||[]; selectedPendingIndex=Number.isInteger(s.selected)&&s.selected<pendingSchedules.length?s.selected:-1; selStart=s.start; selEnd=s.end; selCats=new Set(s.cats||[CATS[0].n]);
   document.getElementById('recTitle').value=s.title||''; document.getElementById('memo').value=s.memo||'';
   renderCats(); renderDrafts(); renderTL();
 }
@@ -513,7 +578,7 @@ function decideSchedule(){
     title:document.getElementById('recTitle').value.trim(), cats:[...selCats],
     startH:selStart, endH:selEnd, hours:selH, memo:document.getElementById('memo').value.trim()
   });
-  selCats=new Set(['仕事']); selectedPendingIndex=-1; selStart=9; selEnd=10; clampSel();
+  selCats=new Set([CATS[0].n]); selectedPendingIndex=-1; selStart=9; selEnd=10; clampSel();
   document.getElementById('recTitle').value=''; document.getElementById('memo').value='';
   renderCats(); renderDrafts(); renderTL(); sfxDecide(); toast('予定を追加した！');
 }
@@ -571,7 +636,7 @@ function record(){
   state.records.push(...recs); save();
   items.forEach((p,i)=>{ p.recorded=true; p.recordId=recs[i].id; });   // きろく済みは消さずに薄く残す
   // リセット（次もサッと入れられるように）
-  selCats=new Set(['仕事']); selectedPendingIndex=-1; editingRecordedIndex=-1; selStart=9; selEnd=10; document.getElementById('recTitle').value=''; document.getElementById('memo').value='';
+  selCats=new Set([CATS[0].n]); selectedPendingIndex=-1; editingRecordedIndex=-1; selStart=9; selEnd=10; document.getElementById('recTitle').value=''; document.getElementById('memo').value='';
   renderCats(); renderDrafts(); renderTL();
   sfxRec();
   toast(recs.length+'件記録した！');
@@ -611,7 +676,7 @@ async function syncOne(rec){
   try{
     await fetch(gas,{ method:'POST', mode:'no-cors',
       headers:{'Content-Type':'text/plain'},           // no-corsで許される簡易ヘッダ。GAS側で e.postData.contents を JSON.parse
-      body:JSON.stringify({ id:rec.id, date:rec.date, cats:rec.cats, hours:rec.hours, start:rec.start, end:rec.end, startH:rec.startH, endH:rec.endH, title:rec.title||'', memo:rec.memo }) });
+      body:JSON.stringify({ id:rec.id, date:rec.date, cats:rec.cats, color:(CATS.find(c=>c.n===(rec.cats||[])[0])||{}).g, hours:rec.hours, start:rec.start, end:rec.end, startH:rec.startH, endH:rec.endH, title:rec.title||'', memo:rec.memo }) });
     rec.synced=true; save();                            // no-corsは応答を読めないので「送れた＝成功」とみなす（オフライン時のみ例外で失敗検知）
   }catch(e){ rec.synced=false; save(); }
   updateUnsync();
@@ -688,8 +753,11 @@ function renderWeek(){
   // カテゴリ合計（重複カウントOK）
   const tot={}; CATS.forEach(c=>tot[c.n]=0);
   recs.forEach(r=>r.cats.forEach(c=>{ tot[c]=(tot[c]||0)+r.hours; }));
-  const caps={}; CATS.forEach(c=>caps[c.n]=goalOf(c.n));
+  const wc=weekCaps(wkStart), caps=wc.caps;
   document.getElementById('totals').innerHTML=renderTotals(tot,caps);
+  const pr=document.getElementById('wkProrate');
+  pr.classList.toggle('hide',wc.days>=7);
+  pr.textContent=wc.days<7?`※ スタート日の週なので、枠は残り${wc.days}日ぶん（週の枠 × ${wc.days}/7）で見てるよ`:'';
   const cm=conflictMsg(tot,caps);
   document.getElementById('wkMsg').className='ckmsg '+cm.cls;
   document.getElementById('wkMsg').innerHTML=cm.html;
@@ -850,7 +918,7 @@ function renderHUD(){
   const ws=startOfWeek(new Date());
   const wk=sumRange(iso(ws),iso(addDays(ws,6)));
   const td=sumRange(t,t);
-  const caps={}; CATS.forEach(c=>caps[c.n]=goalOf(c.n));
+  const caps=weekCaps(ws).caps;
   const lamps=CATS.filter(c=>goalOf(c.n)>0).map(c=>{
     const sg=sigOf(wk.tot[c.n]||0,caps[c.n]);
     return `<span class="sig ${sg}" title="${c.n} ${(wk.tot[c.n]||0).toFixed(1)}h / ${caps[c.n].toFixed(0)}h"></span>`;
@@ -885,21 +953,24 @@ function renderGoal(){
       <div class="gv" style="color:${g>0?c.c:'var(--dim)'}">${g.toFixed(1)}</div>
       <button onclick="bumpGoal('${c.n}',0.5)">＋</button></div>`;
   }).join('');
+  renderCatRows();
+  document.getElementById('startDate').value=state.startDate||todayStr();
   renderCkList();
 }
 
 /* ---------- 答え合わせ（チェックポイント） ---------- */
-const CK_LABEL={segA:'前半3日',segB:'後半4日',week:'1週間',month:'1ヶ月'};
+const CK_LABEL={segA:'前半3日（月火水）',segB:'後半4日（木金土日）',week:'1週間',month:'1ヶ月'};
 function firstRecDate(){ let m=null; state.records.forEach(r=>{ if(!m||r.date<m)m=r.date; }); return m; }
 function fmtD(ds){ const d=new Date(ds+'T00:00:00'); return ds.slice(5).replace('-','/')+'('+DOW[d.getDay()]+')'; }
 function allChecks(){
-  const out=[],fr=firstRecDate(); if(!fr)return out;
+  const out=[]; let fr=firstRecDate(); if(!fr)return out;
+  if(state.startDate&&state.startDate>fr)fr=state.startDate;   // スタート日より前は掘り返さない
   const today=todayStr();
   let ws=startOfWeek(new Date(fr+'T00:00:00')),guard=0;
   while(iso(ws)<=today&&guard++<400){
     const a0=iso(ws);
-    if(iso(addDays(ws,3))<=today)out.push({id:'A'+a0,kind:'segA',from:a0,to:iso(addDays(ws,2)),days:3});
-    if(iso(addDays(ws,7))<=today){
+    if(iso(addDays(ws,3))<=today&&a0>=fr)out.push({id:'A'+a0,kind:'segA',from:a0,to:iso(addDays(ws,2)),days:3});
+    if(iso(addDays(ws,7))<=today&&a0>=fr){
       out.push({id:'B'+a0,kind:'segB',from:iso(addDays(ws,3)),to:iso(addDays(ws,6)),days:4});
       out.push({id:'W'+a0,kind:'week',from:a0,to:iso(addDays(ws,6)),days:7});
     }
@@ -909,7 +980,7 @@ function allChecks(){
   for(let i=0;i<80;i++){
     const y=d.getFullYear(),m=d.getMonth(),last=new Date(y,m+1,0);
     if(iso(last)>=today)break;
-    out.push({id:'M'+iso(d).slice(0,7),kind:'month',from:iso(d),to:iso(last),days:last.getDate()});
+    if(iso(d)>=fr)out.push({id:'M'+iso(d).slice(0,7),kind:'month',from:iso(d),to:iso(last),days:last.getDate()});
     d=new Date(y,m+1,1);
   }
   out.sort((a,b)=>a.to<b.to?1:(a.to>b.to?-1:0));   // 新しい順
@@ -965,6 +1036,90 @@ function renderCkList(){
       <div class="d">${fmtD(c.from)} 〜 ${fmtD(c.to)}</div>
       <div class="go">${done?'済':'▶ 開く'}</div></div>`;
   }).join('');
+}
+
+/* ---------- タスクの種類（最大12＝カレンダーの色数） ---------- */
+function usedColors(){ return new Set(CATS.map(c=>c.g)); }
+function freeColor(){ const u=usedColors(); return (PALETTE.find(p=>!u.has(p.g))||PALETTE[0]).g; }
+function recCount(n){ return state.records.filter(r=>(r.cats||[]).includes(n)).length; }
+function renderCatRows(){
+  document.getElementById('catCount').textContent=CATS.length;
+  const ab=document.getElementById('addCatBtn');
+  ab.disabled=CATS.length>=MAX_CATS;
+  ab.textContent=CATS.length>=MAX_CATS?'カレンダーの色を使い切りました（12個が上限）':'＋ 種類を追加';
+  document.getElementById('catRows').innerHTML=CATS.map((c,i)=>{
+    const used=recCount(c.n);
+    return `<div class="catedit">
+      <input class="emo" value="${escAttr(c.i||'')}" maxlength="2" onchange="setCatIcon(${i},this.value)">
+      <input class="nmi" style="color:${c.c}" value="${escAttr(c.n)}" maxlength="14" onchange="renameCat(${i},this.value)">
+      <button class="swatch" onclick="openPal(${i})" title="カレンダーの色"><i style="background:${c.c};color:${c.c}"></i></button>
+      <button class="rm" onclick="delCat(${i})" ${used?'disabled':''} title="${used?used+'件の記録があるので消せません':'消す'}">×</button>
+    </div>`;
+  }).join('');
+}
+function commitCats(){
+  CATS=state.cats; save(); renderCatRows(); renderGoal(); renderCats(); renderHUD();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderWeek();
+}
+function setCatIcon(i,v){ state.cats[i].i=(v||'').trim(); commitCats(); }
+function renameCat(i,v){
+  const nn=(v||'').trim(), old=state.cats[i].n;
+  if(!nn||nn===old){ renderCatRows(); return; }
+  if(state.cats.some((c,j)=>j!==i&&c.n===nn)){ toast('その名前はもう使ってる'); renderCatRows(); return; }
+  state.cats[i].n=nn;
+  state.records.forEach(r=>{ r.cats=(r.cats||[]).map(c=>c===old?nn:c); });   // 過去の記録も付け替え
+  state.goals[nn]=state.goals[old]||0; delete state.goals[old];
+  if(selCats.has(old)){ selCats.delete(old); selCats.add(nn); }
+  commitCats(); toast('「'+nn+'」に変えた');
+}
+function addCat(){
+  if(CATS.length>=MAX_CATS)return;
+  const pl=PALETTE.find(p=>p.g===freeColor());
+  let n='あたらしい種類',k=2; while(state.cats.some(c=>c.n===n))n='あたらしい種類'+(k++);
+  state.cats.push({n,c:pl.c,i:'🔹',g:pl.g}); state.goals[n]=0;
+  commitCats(); toast('追加した。名前を書き換えてね');
+}
+function delCat(i){
+  const c=state.cats[i];
+  if(recCount(c.n)){ toast('記録があるので消せない'); return; }
+  if(state.cats.length<=1){ toast('最後の1つは消せない'); return; }
+  if(!confirm('「'+c.n+'」を消す？'))return;
+  delete state.goals[c.n]; state.cats.splice(i,1);
+  selCats.delete(c.n); if(!selCats.size)selCats.add(state.cats[0].n);
+  commitCats();
+}
+let palIdx=-1;
+function openPal(i){
+  palIdx=i; const u=usedColors(), cur=state.cats[i].g;
+  document.getElementById('palGrid').innerHTML=PALETTE.map(pp=>
+    `<button class="${pp.g===cur?'on':''}" ${(u.has(pp.g)&&pp.g!==cur)?'disabled':''} onclick="pickPal('${pp.g}')">
+       <i style="background:${pp.c};color:${pp.c}"></i>${pp.jp}</button>`).join('');
+  document.getElementById('palOverlay').classList.add('show');
+}
+function closePal(){ document.getElementById('palOverlay').classList.remove('show'); palIdx=-1; }
+function pickPal(g){
+  if(palIdx<0)return; const pl=PALETTE.find(p=>p.g===g);
+  state.cats[palIdx].g=g; state.cats[palIdx].c=pl.c;
+  closePal(); commitCats();
+  state.records.forEach(r=>r.synced=false); save(); updateUnsync();   // 色を送り直す
+  toast('色を変えた。「未同期」を押すとカレンダーにも反映');
+}
+
+/* ---------- 答え合わせのスタート日 ---------- */
+function setStartDate(v){
+  if(!v)return; state.startDate=v; save();
+  updateCkBanner(); renderCkList(); renderHUD();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderWeek();
+  toast(v.slice(5).replace('-','/')+' から数えるよ');
+}
+/* スタート週は残り日数ぶんに枠を割る（週の途中から始めても赤くならない） */
+function weekCaps(ws){
+  const we=addDays(ws,6), sd=state.startDate;
+  let d=7;
+  if(sd&&sd>iso(ws)&&sd<=iso(we))
+    d=Math.round((new Date(iso(we)+'T00:00:00')-new Date(sd+'T00:00:00'))/86400000)+1;
+  const o={}; CATS.forEach(c=>o[c.n]=goalOf(c.n)*d/7);
+  return {caps:o,days:d};
 }
 
 /* 設定 */
