@@ -240,6 +240,11 @@
   .liferow2 .ln small{display:block; color:var(--dim); font-weight:400; font-size:10px}
   .liferow2 button{width:36px; height:36px; font-size:18px; font-weight:900; background:var(--panel2); border:1px solid var(--line); color:var(--text); cursor:pointer; flex:none}
   .liferow2 .lv{width:52px; text-align:center; font-family:"Courier New",monospace; font-size:15px; font-weight:900; color:var(--cyan); flex:none}
+  .daynote{margin-top:16px}
+  .daynote textarea{width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:12px; font-size:14px; font-family:inherit; min-height:96px; resize:vertical; line-height:1.7}
+  .daynote textarea:focus{outline:none; border-color:var(--cyan); box-shadow:var(--glow)}
+  .dnote{margin:6px 0 4px; padding:8px 11px; background:#0a1024; border-left:2px solid var(--cyan); font-size:12px; color:var(--text); line-height:1.7; white-space:pre-wrap}
+  .dnote.small{font-size:11px; color:var(--dim); border-left-color:var(--dim)}
   .daywarn{padding:11px 13px; margin-top:10px; font-size:13px; line-height:1.6; border-left:3px solid var(--dim); background:#0a1024}
   .daywarn.g{border-color:#00ff9f} .daywarn.y{border-color:#f9f002; color:#f9f002; animation:blink 1.6s infinite}
   .daywarn.r{border-color:#ff3b3b; color:#ff3b3b; animation:blink .8s infinite}
@@ -330,6 +335,12 @@
   <div class="daywarn" id="dayWarn"></div>
 <button class="rec-btn" id="recordBtn" onclick="record()">記録する</button>
   <button class="unsync hide" id="unsyncBtn" onclick="resendAll()"></button>
+
+  <div class="card daynote">
+    <span class="lbl">📝 <span id="dnLabel">今日</span>のこと（1日ぜんぶのメモ）</span>
+    <textarea id="dayNote" placeholder="なんでもいい。ひとことでも、書かなくてもいい。" oninput="saveDayNote()"></textarea>
+    <div class="hint" id="dnHint"></div>
+  </div>
 </div>
 
 <!-- ふりかえり -->
@@ -570,7 +581,7 @@ function renderCats(){
     c.appendChild(b);
   });
 }
-function syncDateUI(){ setTimeout(renderDayWarn,0);
+function syncDateUI(){ loadDayNote(); setTimeout(renderDayWarn,0);
   editingRecordedIndex=-1;
   document.getElementById('dDate').value=selDate;
   document.getElementById('dDate').max=todayStr();
@@ -867,7 +878,8 @@ function renderView(){
     html+=`<div class="day"><div class="dh">${ds.slice(5)}（${DOW[day.getDay()]}）`
       +(dh>0?`<span class="dsig" style="color:${dsg==='r'?'#ff3b3b':dsg==='y'?'#f9f002':'var(--dim)'}"><span class="sig ${dsg}"></span>${dh.toFixed(1)}h / ${state.dayDanger}h</span>`:'')
       +`</div>`;
-    if(!dr.length) html+='<div class="rec" style="color:var(--dim)">—</div>';
+    if(state.dayNotes[ds])html+=`<div class="dnote">${esc(state.dayNotes[ds])}</div>`;
+    if(!dr.length&&!state.dayNotes[ds]) html+='<div class="rec" style="color:var(--dim)">—</div>';
     const timed=dr.map(r=>{
       const parse=h=>{ if(!h)return null; const p=String(h).split(':').map(Number); return p[0]+(p[1]||0)/60; };
       let start=r.startH!==null&&r.startH!==undefined?Number(r.startH):parse(r.start);
@@ -1119,6 +1131,12 @@ function updateCkBanner(){
   el.innerHTML=`▶ 答え合わせが届いてる：<span style="color:var(--text)">${ckName(c)}（${fmtD(c.from)}〜${fmtD(c.to)}）</span>`
     +(pend.length>1?`<span class="n">${pend.length}</span>`:'');
 }
+function ckNotes(c){
+  const ns=Object.keys(state.dayNotes).filter(d=>d>=c.from&&d<=c.to).sort();
+  if(!ns.length)return '';
+  return `<div class="ckstat" style="margin:12px 0 4px">📝 この期間に書いたこと</div>`
+    +ns.map(d=>`<div class="dnote small"><b style="color:var(--cyan)">${fmtD(d)}</b>　${esc(state.dayNotes[d])}</div>`).join('');
+}
 function ckName(c){ return c.kind==='cycle'?`サイクル #${c.no}（${c.days}日）`:'1ヶ月'; }
 let curCk=null;
 function openNextCk(){ const p=pendingChecks(); if(p.length)openCk(p[0].id); }
@@ -1135,6 +1153,7 @@ function openCk(id){
     <div class="ckstat">合計 ${total.toFixed(1)}h ／ 記録した日 ${days}/${c.days}日 ／ ${count}件　（枠＝1サイクルの枠 × ${c.days}/${CD()}）</div>
     ${renderTotals(tot,caps)}
     <div class="ckmsg ${msg.cls}">${msg.html}</div>
+    ${ckNotes(c)}
     <textarea id="ckNote" placeholder="気づいたこと（空でもOK）">${esc(saved&&saved.note||'')}</textarea>
     <div class="row">
       <button onclick="closeCk()">あとで</button>
@@ -1441,6 +1460,27 @@ function renderDayWarn(){
       <u style="left:${G/scale*100}%"></u><s style="left:${D/scale*100}%"></s></div>`;
 }
 
+/* ---------- 1日ぜんぶのメモ（記録ごとのメモとは別物） ---------- */
+if(!state.dayNotes)state.dayNotes={};
+function saveDayNote(){
+  const v=document.getElementById('dayNote').value;
+  if(v.trim())state.dayNotes[selDate]=v; else delete state.dayNotes[selDate];
+  save(); renderDnHint();
+}
+function renderDnHint(){
+  const n=Object.keys(state.dayNotes).length;
+  document.getElementById('dnHint').innerHTML=
+    `この日にひもづきます。上の日付を変えると、その日のメモになります。<br>書いたメモは<b>ふりかえりと答え合わせに一緒に出てきます</b>。`
+    +(n?`　（これまで ${n}日ぶん）`:'');
+}
+function loadDayNote(){
+  const t=todayStr();
+  document.getElementById('dnLabel').textContent =
+    selDate===t?'今日':(selDate===iso(addDays(new Date(),-1))?'きのう':selDate.slice(5).replace('-','/'));
+  document.getElementById('dayNote').value=state.dayNotes[selDate]||'';
+  renderDnHint();
+}
+
 /* 設定 */
 function openSet(){ document.getElementById('fGas').value=localStorage.getItem(GKEY)||''; document.getElementById('setMsg').textContent=''; document.getElementById('setOverlay').classList.add('show'); }
 function closeSet(){ document.getElementById('setOverlay').classList.remove('show'); }
@@ -1456,7 +1496,7 @@ function testGas(){
 
 /* 起動 */
 renderCats(); renderDrafts(); syncDateUI(); updateUnsync(); initTL(); renderTL();
-renderHUD(); updateCkBanner(); renderCkList();
+renderHUD(); updateCkBanner(); renderCkList(); loadDayNote();
 importCalendarRecords(false);
 /* Service Worker 登録（PWA / オフライン） */
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
