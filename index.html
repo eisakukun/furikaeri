@@ -387,7 +387,7 @@
       <span class="ct">24h</span><span class="op">−</span>
       <span class="cb">睡眠<button onclick="bumpDay('sleep',-0.5)">−</button><b id="slVal">7.0</b><button onclick="bumpDay('sleep',0.5)">＋</button></span>
       <span class="op">−</span>
-      <span class="cb">余裕<button onclick="bumpDay('dayBuffer',-0.5)">−</button><b id="dbVal">3.0</b><button onclick="bumpDay('dayBuffer',0.5)">＋</button></span>
+      <span class="cb">飯・仕事<button onclick="bumpDay('dayBuffer',-0.5)">−</button><b id="dbVal">6.0</b><button onclick="bumpDay('dayBuffer',0.5)">＋</button></span>
     </div>
     <div class="calcout"><span class="pd" id="budPerDay">14.0</span><span class="mul">h ／日　×<span id="cdN">3</span>日 ＝ <b id="budVal">42.0h</b></span></div>
     <div class="zonebar" id="zoneBar"></div>
@@ -405,7 +405,7 @@
     <button class="preset" onclick="applyPreset()">✦ おすすめの配分を入れる</button>
     <div class="hint">これは「やれ」じゃなくて「ここまでなら他を潰さない」ライン。<br>
       実績が枠の8割で🟡＝ここから先は他の枠を削り始める。枠を超えたら🔴＝もう削ってる。<br>
-      <b>「どこにも決めてない時間」は余りではなく、飯・風呂・移動・疲れ・SNSで消える分です。</b>ここが0になるまで配ると、絶対に守れない設計になります。</div>
+      <b>「どこにも決めてない時間」は余りではなく、風呂・移動・疲れ・SNS・予定外で消える分です。</b>ここが0になるまで配ると、絶対に守れない設計になります。<br>「飯・仕事」は<b>記録しない時間</b>＝ここで先に引いてあるので、タグの枠はその残りだけを取り合います。</div>
   </div>
 
   <div class="card">
@@ -481,17 +481,18 @@ const PALETTE=[
   {g:'DEFAULT',    c:'#c77dff', jp:'既定'}
 ];
 const MAX_CATS=PALETTE.length;
+/* 2026-10-02 まっさらにして入れ替えたタグ。期限付き＝いつ変えてもいい前提。
+   並びを変えるときは TAGSET_ID を上げると、全部の端末に一度だけ入れ替わる。 */
+const TAGSET_ID='2026-10-02b';
 const DEFAULT_CATS=[
-  {n:'仕事',            c:'#ff3b3b', i:'💼', g:'RED'},
-  {n:'撮影編集',         c:'#00ff9f', i:'🎬', g:'GREEN'},
-  {n:'研究・プログラミング', c:'#b14bff', i:'💻', g:'MAUVE'},
-  {n:'3Dプリンター工作',  c:'#00f0ff', i:'🖨️', g:'CYAN'},
-  {n:'ダンス',          c:'#ff2e97', i:'🕺', g:'PALE_RED'},
-  {n:'出会い',          c:'#ff6a00', i:'✨', g:'ORANGE'},
-  {n:'人と会う・イベント', c:'#f9f002', i:'🎉', g:'YELLOW'},
-  {n:'生活・その他',     c:'#8a93b0', i:'🏠', g:'GRAY'},
-  {n:'日本語',          c:'#3b6bff', i:'📖', g:'BLUE'},
-  {n:'音楽',            c:'#7dff5c', i:'🎵', g:'PALE_GREEN'}
+  {n:'メディアパイプ',        c:'#00ff9f', i:'🖐', g:'GREEN'},
+  {n:'ダンス',              c:'#ff2e97', i:'🕺', g:'PALE_RED'},
+  {n:'環境構築',            c:'#00f0ff', i:'🛠', g:'CYAN'},
+  {n:'日本語',              c:'#3b6bff', i:'📖', g:'BLUE'},
+  {n:'その他のプログラミング', c:'#b14bff', i:'💻', g:'MAUVE'},
+  {n:'出会い',              c:'#ff6a00', i:'✨', g:'ORANGE'},
+  {n:'生活',                c:'#8a93b0', i:'🏠', g:'GRAY'},
+  {n:'3Dプリンター',         c:'#f9f002', i:'🖨', g:'YELLOW'}
 ];
 let CATS=DEFAULT_CATS;
 const catColor=n=>{ const x=CATS.find(c=>c.n===n); return x?x.c:'#8a93b0'; };
@@ -501,21 +502,27 @@ function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 let state=load();
 /* ===== 目標＝週の「枠」。ノルマではなく予算。 ===== */
 /* 枠の単位は「1サイクル(既定3日)あたり」。意識が届く範囲がそこまでだから。 */
-const DEFAULT_GOALS={'仕事':9,'撮影編集':2,'研究・プログラミング':6,'3Dプリンター工作':1,'ダンス':3.5,'出会い':1.5,'人と会う・イベント':2,'生活・その他':3};
+/* 単位は「1サイクル＝7日あたりの時間」。1日に使えるのは 24−睡眠7−(飯2+仕事など4)=11h、
+   7日で77h。ここでは55hだけ配って、22hは意図的にどこにも決めない。 */
+const DEFAULT_GOALS={'メディアパイプ':13,'ダンス':7,'環境構築':4,'日本語':8,'その他のプログラミング':7,'出会い':4,'生活':10,'3Dプリンター':2};
 if(!Array.isArray(state.cats)||!state.cats.length)state.cats=JSON.parse(JSON.stringify(DEFAULT_CATS));
 state.cats.forEach((c,i)=>{ if(!c.g)c.g=(PALETTE[i]||PALETTE[PALETTE.length-1]).g;
   const pl=PALETTE.find(p=>p.g===c.g); if(pl)c.c=pl.c; });
-/* 追加ぶんを既存の端末にも一度だけ入れる（色は空いてるものを使う） */
 state.goals=state.goals||{};
-[{n:'日本語',i:'📖',g:'BLUE'},{n:'音楽',i:'🎵',g:'PALE_GREEN'}].forEach(add=>{
-  if(state.cats.some(c=>c.n===add.n))return;
-  if(state.cats.length>=PALETTE.length)return;
-  const used=new Set(state.cats.map(c=>c.g));
-  const pl=PALETTE.find(p=>p.g===add.g&&!used.has(p.g))||PALETTE.find(p=>!used.has(p.g));
-  if(!pl)return;
-  state.cats.push({n:add.n,i:add.i,g:pl.g,c:pl.c});
-  if(typeof state.goals[add.n]!=='number')state.goals[add.n]=0;
-});
+/* タグの入れ替え。TAGSET_ID が変わった端末で一度だけ走る。
+   過去の記録そのものは消さない（古いタグ名の記録は集計に出なくなるだけ）。 */
+if(state.tagsetId!==TAGSET_ID){
+  state.cats=JSON.parse(JSON.stringify(DEFAULT_CATS));
+  state.goals={}; Object.keys(DEFAULT_GOALS).forEach(k=>state.goals[k]=DEFAULT_GOALS[k]);
+  state.cycleDays=7;        // 1サイクル＝1週間
+  state.sleep=7;            // 睡眠
+  state.dayBuffer=6;        // 飯2h＋仕事など4h ＝ 記録しない時間
+  state.dayDanger=8;        // 1日の記録合計がここを超えたら🟡
+  state.budget=(24-7-6)*7;  // 1日11h × 7日 ＝ 77h（めやすを開くと自動で計算し直される）
+  state.tagsetId=TAGSET_ID;
+  state.tagsetFrom=todayStr0();
+  state.unitCycle=1;        // 旧「週→サイクル」換算を走らせない
+}
 CATS=state.cats;
 if(!state.goals)state.goals={};
 if(typeof state.budget!=='number')state.budget=51;   // 起きてる17h×3日
@@ -1400,9 +1407,9 @@ ${titles.map(([t,a])=>`- ${t} （${a.n}回・計${a.h.toFixed(1)}h）`).join('\n
 }
 
 /* ---------- おすすめの配分を一発で入れる ---------- */
-/* 合計27h＝危険ライン9h×3日。種類が増えたら誰かが減る、が見えるようにしてある。 */
-const PRESET={'仕事':10,'研究・プログラミング':4,'ダンス':2.5,'生活・その他':2.5,
-  '音楽':2,'日本語':1.5,'人と会う・イベント':1.5,'撮影編集':1.5,'出会い':1,'3Dプリンター工作':0.5};
+/* 単位は3日あたり。サイクル日数に合わせて倍率がかかる（7日なら約2.33倍＝週55h）。 */
+const PRESET={'メディアパイプ':6,'その他のプログラミング':3.5,'生活':4.5,'ダンス':3,
+  '日本語':2.5,'環境構築':1.5,'出会い':1.5,'3Dプリンター':1};
 function applyPreset(){
   const f=CD()/3, hit=CATS.filter(c=>PRESET[c.n]!==undefined);
   if(!hit.length){ toast('名前を変えたので当てはめられない'); return; }
