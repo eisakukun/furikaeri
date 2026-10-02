@@ -320,7 +320,8 @@
     </div>
     <div class="hint">クロードコードで触っていた時間と、三角メニューのストップウォッチが勝手に並びます。<br>
       <b>押すまで記録にはなりません。</b>違うタグなら名前をタップして付け替えてください。<br>
-      <b>❓の点線</b>は、フォルダを指定せずに始めたぶん＝<b>タグは当てずっぽう</b>です。ここだけは必ず見てください。</div>
+      <b>❓の点線</b>は、フォルダを指定せずに始めたぶん＝<b>タグは当てずっぽう</b>です。ここだけは必ず見てください。<br>
+      ⏱で宣言した時間と重なる自動の下書きは出しません（<b>自己申告のほうが強い</b>）。</div>
   </div>
 
   <div class="card">
@@ -847,7 +848,14 @@ async function loadInbox(manual){
     }catch(e){}
   }
   const from=state.startDate||'0000-00-00';   // 観察を始めた日より前の下書きは出さない
-  INBOX=got.filter(it=>it.date>=from && !(it.id in state.inboxDone) && !overlapsRecord(it))
+  /* 自己申告（ストップウォッチ）が走っていた時間は、そっちが正しい。
+     フォルダ名は「何を触ったか」しか知らないが、押した本人は「何のためか」を知っている。
+     だから手で宣言した時間と重なる自動の下書きは、最初から出さない。 */
+  const declared=got.filter(it=>it.from==='manual');
+  const isDeclared=it=>it.from!=='manual' && declared.some(m=>m.date===it.date &&
+    Math.min(m.endH,it.endH)-Math.max(m.startH,it.startH) > 0.1);
+  INBOX=got.filter(it=>it.date>=from && !(it.id in state.inboxDone)
+                    && !overlapsRecord(it) && !isDeclared(it))
            .sort((a,b)=> a.date<b.date?-1 : a.date>b.date?1 : a.startH-b.startH);
   renderInbox();
   if(manual)toast(INBOX.length?INBOX.length+'件の下書きがある':'新しい下書きは無かった');
