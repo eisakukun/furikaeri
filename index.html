@@ -529,8 +529,8 @@ let state=load();
 /* ===== 目標＝週の「枠」。ノルマではなく予算。 ===== */
 /* 枠の単位は「1サイクル(既定3日)あたり」。意識が届く範囲がそこまでだから。 */
 /* 単位は「1サイクル＝7日あたりの時間」。1日に使えるのは 24−睡眠7−(飯2+仕事など4)=11h、
-   7日で77h。ここでは55hだけ配って、22hは意図的にどこにも決めない。 */
-const DEFAULT_GOALS={'メディアパイプ':13,'ダンス':7,'環境構築':4,'日本語':8,'その他のプログラミング':7,'出会い':4,'生活':10,'3Dプリンター':2};
+   7日で77h。配るのは63hだけで、14hは意図的にどこにも決めない。 */
+const DEFAULT_GOALS={'メディアパイプ':13,'ダンス':7,'環境構築':12,'日本語':8,'その他のプログラミング':7,'出会い':4,'生活':10,'3Dプリンター':2};
 if(!Array.isArray(state.cats)||!state.cats.length)state.cats=JSON.parse(JSON.stringify(DEFAULT_CATS));
 state.cats.forEach((c,i)=>{ if(!c.g)c.g=(PALETTE[i]||PALETTE[PALETTE.length-1]).g;
   const pl=PALETTE.find(p=>p.g===c.g); if(pl)c.c=pl.c; });
@@ -555,6 +555,13 @@ if(typeof state.budget!=='number')state.budget=51;   // 起きてる17h×3日
 if(typeof state.cycleDays!=='number')state.cycleDays=3;
 if(!state.checks)state.checks={};
 if(!state.inboxDone)state.inboxDone={};   /* 📥 受け取り箱で ○／✕ を押したものの控え */
+/* 枠だけの手直し。実測（直近10日で週22h相当）に対して4hは外れすぎていたので3倍にした。
+   タグ全体は入れ替えずに、この1項目だけを一度だけ差し替える。 */
+if(state.goalsRev!=='2026-10-02-kankyo12'){
+  state.goals['環境構築']=12;
+  state.goalsRev='2026-10-02-kankyo12';
+  save();
+}
 /* 答え合わせを始める日。過去の記録を掘り返して未読を大量発生させない。 */
 if(!state.startDate)state.startDate=todayStr0();
 /* 2026-10-02（金）から観察開始。ここを起点に7日ずつ区切るので、
