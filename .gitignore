@@ -1,0 +1,6 @@
+# 個人の記録と取り込みの道具は外に出さない（iPhone側では使わないので公開不要）
+inbox-auto.json
+inbox-manual.json
+scan.mjs
+tagmap.json
+index.html.bak-*

@@ -54,6 +54,19 @@
   .timerow{display:flex; align-items:center; gap:14px; justify-content:center}
   .timerow button{width:60px; height:60px; font-size:30px; font-weight:900; background:var(--panel2); border:1px solid var(--cyan); color:var(--cyan); cursor:pointer; box-shadow:var(--glow)}
   .timeval{font-family:"Courier New",monospace; font-size:34px; font-weight:900; color:var(--cyan); text-shadow:var(--glow); min-width:110px; text-align:center}
+  /* とどいた下書き（受け取り箱） */
+  .ibrow{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px dashed rgba(255,255,255,.09)}
+  .ibrow:last-child{border-bottom:0}
+  .ibt{font:600 11px/1 ui-monospace,monospace;color:var(--dim);white-space:nowrap}
+  .ibh{font:700 12px/1 ui-monospace,monospace;white-space:nowrap}
+  .ibtag{font-size:11px;font-weight:700;padding:3px 7px;border-radius:999px;border:1px solid currentColor;background:transparent;cursor:pointer}
+  .ibname{flex:1;min-width:0;font-size:12px;color:#dfe6ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ibok,.ibng{width:30px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);color:#dfe6ff;font-size:14px;cursor:pointer;flex:none}
+  .ibok{border-color:#00ff9f;color:#00ff9f}
+  .ibng{color:var(--dim)}
+  .inboxfoot{display:flex;gap:8px;margin-top:9px}
+  .inboxfoot button{flex:1;padding:9px;border-radius:9px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:#dfe6ff;font-size:12px;font-weight:700;cursor:pointer}
+  .ibAll{border-color:#00ff9f !important;color:#00ff9f !important}
   /* 24時間タイムライン */
   .tl{position:relative; height:100px; background:#0a1024; border:1px solid var(--line); overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none; cursor:crosshair; margin-top:4px}
   .tl .tick{position:absolute; top:0; bottom:18px; width:1px; background:rgba(36,58,99,.7)}
@@ -297,6 +310,17 @@
 <div class="hud" id="hud"></div>
 
 <div id="viewRec">
+  <div class="card hide" id="inboxCard">
+    <span class="lbl">📥 とどいた下書き　<small id="inboxWhen" style="color:var(--dim);font-weight:400"></small></span>
+    <div id="inboxRows"></div>
+    <div class="inboxfoot">
+      <button class="ibAll" onclick="inboxAll()">ぜんぶ入れる</button>
+      <button class="ibRe" onclick="loadInbox(true)">🔄 取り込み直す</button>
+    </div>
+    <div class="hint">クロードコードで触っていた時間と、三角メニューのストップウォッチが勝手に並びます。<br>
+      <b>押すまで記録にはなりません。</b>違うタグなら名前をタップして付け替えてください。</div>
+  </div>
+
   <div class="card">
     <span class="lbl">📅 いつのこと？（過去〜今日）</span>
     <div class="daterow">
@@ -528,6 +552,7 @@ if(!state.goals)state.goals={};
 if(typeof state.budget!=='number')state.budget=51;   // 起きてる17h×3日
 if(typeof state.cycleDays!=='number')state.cycleDays=3;
 if(!state.checks)state.checks={};
+if(!state.inboxDone)state.inboxDone={};   /* 📥 受け取り箱で ○／✕ を押したものの控え */
 /* 答え合わせを始める日。過去の記録を掘り返して未読を大量発生させない。 */
 if(!state.startDate)state.startDate=todayStr0();
 /* 2026-10-02（金）から観察開始。ここを起点に7日ずつ区切るので、
@@ -787,6 +812,86 @@ function deleteRecordedDraft(i){
   renderDrafts(); renderTL();
   if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
   toast('記録を削除した');
+}
+
+/* ==================================================================
+   📥 受け取り箱 — 自動でできた「下書き」を、押したときだけ記録にする
+   ・inbox-auto.json   … scan.mjs が書く（クロードコードで触っていた時間）
+   ・inbox-manual.json … 三角メニューのストップウォッチが書く
+   どちらも Mac でローカルサーバー越しに開いたときだけ読める（iPhoneでは静かに無視）。
+   押すまで記録にならないのが肝。入力ではなく承認にするため。
+   ================================================================== */
+let INBOX=[];
+/* すでに入っている記録と時間が重なる下書きは出さない（自動と手で二重に数えないため） */
+function overlapsRecord(it){
+  return state.records.some(r=>r.date===it.date &&
+    Math.min(r.endH,it.endH)-Math.max(r.startH,it.startH) > 0.1);
+}
+async function loadInbox(manual){
+  const got=[];
+  for(const f of ['./inbox-auto.json','./inbox-manual.json']){
+    try{
+      const r=await fetch(f+'?t='+Date.now(),{cache:'no-store'});
+      if(!r.ok)continue;
+      const j=await r.json();
+      (j.items||[]).forEach(it=>{ if(it&&it.id&&typeof it.startH==='number')got.push(it); });
+    }catch(e){}
+  }
+  const from=state.startDate||'0000-00-00';   // 観察を始めた日より前の下書きは出さない
+  INBOX=got.filter(it=>it.date>=from && !(it.id in state.inboxDone) && !overlapsRecord(it))
+           .sort((a,b)=> a.date<b.date?-1 : a.date>b.date?1 : a.startH-b.startH);
+  renderInbox();
+  if(manual)toast(INBOX.length?INBOX.length+'件の下書きがある':'新しい下書きは無かった');
+}
+function renderInbox(){
+  const card=document.getElementById('inboxCard'),rows=document.getElementById('inboxRows');
+  if(!card)return;
+  if(!INBOX.length){ card.classList.add('hide'); return; }
+  card.classList.remove('hide');
+  const t=todayStr(), y=iso(addDays(new Date(),-1));
+  document.getElementById('inboxWhen').textContent='（'+INBOX.length+'件・押すまで記録にならない）';
+  rows.innerHTML=INBOX.map(it=>{
+    const col=catColor(it.cats[0]), ic=catIcon(it.cats[0]);
+    const d=it.date===t?'今日':(it.date===y?'きのう':it.date.slice(5).replace('-','/'));
+    return `<div class="ibrow">
+      <span class="ibt">${d} ${it.start}–${it.end}</span>
+      <span class="ibh" style="color:${col}">${it.hours.toFixed(2).replace(/0$/,'')}h</span>
+      <button class="ibtag" style="color:${col}" onclick="inboxTag('${it.id}')">${ic} ${it.cats[0]}</button>
+      <span class="ibname" title="${(it.memo||'').replace(/"/g,'')}">${it.title||''}</span>
+      <button class="ibok" onclick="inboxOk('${it.id}')" title="記録に入れる">○</button>
+      <button class="ibng" onclick="inboxNg('${it.id}')" title="いらない">✕</button>
+    </div>`;
+  }).join('');
+}
+/* タグが違っていたら、名前をタップで次のタグへ送る */
+function inboxTag(id){
+  const it=INBOX.find(x=>x.id===id); if(!it)return;
+  const i=CATS.findIndex(c=>c.n===it.cats[0]);
+  it.cats=[CATS[(i+1)%CATS.length].n];
+  renderInbox();
+}
+function inboxOk(id){
+  const it=INBOX.find(x=>x.id===id); if(!it)return;
+  const rec={ id:'f'+Date.now()+Math.random().toString(36).slice(2,5), date:it.date, cats:it.cats.slice(),
+    hours:it.hours, start:it.start, end:it.end, startH:it.startH, endH:it.endH,
+    title:it.title||'', memo:it.memo||'', synced:false, ts:Date.now() };
+  state.records.push(rec); state.inboxDone[it.id]=1; save();
+  INBOX=INBOX.filter(x=>x.id!==id);
+  renderInbox(); renderHUD(); renderDayWarn(); updateUnsync(); updateCkBanner();
+  if(it.date===selDate)renderTL();
+  if(!document.getElementById('viewWk').classList.contains('hide'))renderView();
+  syncOne(rec); sfxRec();
+}
+function inboxNg(id){
+  state.inboxDone[id]=0; save();
+  INBOX=INBOX.filter(x=>x.id!==id); renderInbox();
+}
+function inboxAll(){
+  if(!INBOX.length)return;
+  const h=INBOX.reduce((a,x)=>a+x.hours,0);
+  if(!confirm(INBOX.length+'件（合計 '+h.toFixed(1)+'h）をぜんぶ記録にする？'))return;
+  INBOX.slice().forEach(it=>inboxOk(it.id));
+  toast('ぜんぶ入れた');
 }
 
 /* ============ GAS同期（no-cors・text/plain。localStorageが一次データ・失敗しても動く） ============ */
@@ -1510,6 +1615,7 @@ function testGas(){
 renderCats(); renderDrafts(); syncDateUI(); updateUnsync(); initTL(); renderTL();
 renderHUD(); updateCkBanner(); renderCkList(); loadDayNote();
 importCalendarRecords(false);
+loadInbox(false);
 /* Service Worker 登録（PWA / オフライン） */
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
 </script>
