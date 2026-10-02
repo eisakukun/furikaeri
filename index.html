@@ -60,6 +60,7 @@
   .ibt{font:600 11px/1 ui-monospace,monospace;color:var(--dim);white-space:nowrap}
   .ibh{font:700 12px/1 ui-monospace,monospace;white-space:nowrap}
   .ibtag{font-size:11px;font-weight:700;padding:3px 7px;border-radius:999px;border:1px solid currentColor;background:transparent;cursor:pointer}
+  .ibtag.guess{border-style:dashed;opacity:.85}   /* フォルダが分からなかった＝タグは当てずっぽう */
   .ibname{flex:1;min-width:0;font-size:12px;color:#dfe6ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ibok,.ibng{width:30px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);color:#dfe6ff;font-size:14px;cursor:pointer;flex:none}
   .ibok{border-color:#00ff9f;color:#00ff9f}
@@ -318,7 +319,8 @@
       <button class="ibRe" onclick="loadInbox(true)">🔄 取り込み直す</button>
     </div>
     <div class="hint">クロードコードで触っていた時間と、三角メニューのストップウォッチが勝手に並びます。<br>
-      <b>押すまで記録にはなりません。</b>違うタグなら名前をタップして付け替えてください。</div>
+      <b>押すまで記録にはなりません。</b>違うタグなら名前をタップして付け替えてください。<br>
+      <b>❓の点線</b>は、フォルダを指定せずに始めたぶん＝<b>タグは当てずっぽう</b>です。ここだけは必ず見てください。</div>
   </div>
 
   <div class="card">
@@ -856,7 +858,7 @@ function renderInbox(){
     return `<div class="ibrow">
       <span class="ibt">${d} ${it.start}–${it.end}</span>
       <span class="ibh" style="color:${col}">${it.hours.toFixed(2).replace(/0$/,'')}h</span>
-      <button class="ibtag" style="color:${col}" onclick="inboxTag('${it.id}')">${ic} ${it.cats[0]}</button>
+      <button class="ibtag${it.guess?' guess':''}" style="color:${col}" onclick="inboxTag('${it.id}')">${it.guess?'❓':ic} ${it.cats[0]}</button>
       <span class="ibname" title="${(it.memo||'').replace(/"/g,'')}">${it.title||''}</span>
       <button class="ibok" onclick="inboxOk('${it.id}')" title="記録に入れる">○</button>
       <button class="ibng" onclick="inboxNg('${it.id}')" title="いらない">✕</button>

@@ -4,3 +4,5 @@ inbox-manual.json
 scan.mjs
 tagmap.json
 index.html.bak-*
+gas/
+.gas-backups/
