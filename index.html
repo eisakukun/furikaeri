@@ -530,6 +530,11 @@ if(typeof state.cycleDays!=='number')state.cycleDays=3;
 if(!state.checks)state.checks={};
 /* 答え合わせを始める日。過去の記録を掘り返して未読を大量発生させない。 */
 if(!state.startDate)state.startDate=todayStr0();
+/* 2026-10-02（金）から観察開始。ここを起点に7日ずつ区切るので、
+   1サイクルは必ず 金→木。超えてはいけない線＝サイクルの最終日(木)。
+   日付を変えるときは OBS_START を書き換えると全端末に一度だけ入る。 */
+const OBS_START='2026-10-02';
+if(state.obsStart!==OBS_START){ state.startDate=OBS_START; state.obsStart=OBS_START; save(); }
 /* 旧バージョンの「週あたり」の数字を「サイクルあたり」に換算（一度だけ） */
 if(!state.unitCycle){
   const f=state.cycleDays/7;
