@@ -1287,6 +1287,7 @@ function openCk(id){
     <div class="ckstat">合計 ${total.toFixed(1)}h ／ 記録した日 ${days}/${c.days}日 ／ ${count}件　（枠＝1サイクルの枠 × ${c.days}/${CD()}）</div>
     ${renderTotals(tot,caps)}
     <div class="ckmsg ${msg.cls}">${msg.html}</div>
+    ${ckGrace(c)}
     ${ckNotes(c)}
     <textarea id="ckNote" placeholder="気づいたこと（空でもOK）">${esc(saved&&saved.note||'')}</textarea>
     <div class="row">
@@ -1295,6 +1296,22 @@ function openCk(id){
     </div>`;
   document.getElementById('ckOverlay').classList.add('show');
   sfxDecide();
+}
+/* 締めてから24時間は、最終日の記録を足しに戻れる。
+   夜の分を入れる前に日付が変わって答え合わせが出ても、取りこぼさないため。
+   答え合わせは開くたびに数え直すので、足せばそのまま棒に反映される。 */
+const GRACE_H=24;
+function graceLeft(c){ const end=addDays(new Date(c.to+'T00:00:00'),1); return (end.getTime()+GRACE_H*3600000-Date.now())/3600000; }
+function ckGrace(c){
+  const left=graceLeft(c); if(c.kind!=='cycle'||left<=0)return '';
+  const h=left>=1?Math.floor(left)+'時間':Math.max(1,Math.round(left*60))+'分';
+  return `<div class="ckmsg" style="border-color:var(--cyan)">⏳ 締めてから${GRACE_H}時間は、まだ足せる（のこり <b>${h}</b>）<br>
+    <button class="q" style="margin-top:8px;width:100%;padding:11px;background:transparent;border:1px solid var(--cyan);color:var(--cyan);font-weight:800;cursor:pointer;font-family:inherit" onclick="ckGoRecord('${c.to}')">✏️ ${fmtD(c.to)} の記録をつけに行く</button></div>`;
+}
+function ckGoRecord(ds){
+  closeCk(); switchTab('rec'); selDate=ds; syncDateUI();
+  window.scrollTo({top:0,behavior:'smooth'});
+  toast(fmtD(ds)+' の記録モード。つけたらもう一度答え合わせを開いてね');
 }
 function closeCk(){ document.getElementById('ckOverlay').classList.remove('show'); curCk=null; }
 function doneCk(){
