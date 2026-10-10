@@ -368,6 +368,11 @@
     <textarea id="dayNote" placeholder="なんでもいい。ひとことでも、書かなくてもいい。" oninput="saveDayNote()"></textarea>
     <div class="hint" id="dnHint"></div>
   </div>
+
+  <details class="card hide" id="inboxOther">
+    <summary id="inboxOtherSum" style="cursor:pointer;font-weight:800;color:var(--dim)"></summary>
+    <div id="inboxOtherRows"></div>
+  </details>
 </div>
 
 <!-- ふりかえり -->
@@ -634,6 +639,7 @@ function syncDateUI(){ loadDayNote(); setTimeout(renderDayWarn,0);
   document.getElementById('dDate').max=todayStr();
   document.getElementById('qToday').classList.toggle('on', selDate===todayStr());
   document.getElementById('qYest').classList.toggle('on', selDate===iso(addDays(new Date(),-1)));
+  if(typeof INBOX!=='undefined')renderInbox();
   clampSel(); if(document.getElementById('tl')) renderTL();   // 未来に食い込んでたら"今"まで戻す＋赤線更新
 }
 function pickQuick(back){ selDate=iso(addDays(new Date(),-back)); syncDateUI(); }
@@ -860,24 +866,39 @@ async function loadInbox(manual){
   renderInbox();
   if(manual)toast(INBOX.length?INBOX.length+'件の下書きがある':'新しい下書きは無かった');
 }
+/* 上の箱は「いま選んでいる日」だけ。きろくの画面は今日に注目する場所なので、
+   ほかの日の下書きは下の畳んだ箱に寄せる（日付を押すとその日に移る）。 */
+function ibRow(it,showDate){
+  const col=catColor(it.cats[0]), ic=catIcon(it.cats[0]);
+  return `<div class="ibrow">
+    <span class="ibt">${showDate?it.date.slice(5).replace('-','/')+' ':''}${it.start}–${it.end}</span>
+    <span class="ibh" style="color:${col}">${it.hours.toFixed(2).replace(/0$/,'')}h</span>
+    <button class="ibtag${it.guess?' guess':''}" style="color:${col}" onclick="inboxTag('${it.id}')">${it.guess?'❓':ic} ${it.cats[0]}</button>
+    <span class="ibname" title="${(it.memo||'').replace(/"/g,'')}">${it.title||''}</span>
+    <button class="ibok" onclick="inboxOk('${it.id}')" title="記録に入れる">○</button>
+    <button class="ibng" onclick="inboxNg('${it.id}')" title="いらない">✕</button>
+  </div>`;
+}
+function dayName(ds){ const t=todayStr(), y=iso(addDays(new Date(),-1)); return ds===t?'今日':(ds===y?'きのう':fmtD(ds)); }
+function inboxGo(ds){ selDate=ds; syncDateUI(); window.scrollTo({top:0,behavior:'smooth'}); }
 function renderInbox(){
   const card=document.getElementById('inboxCard'),rows=document.getElementById('inboxRows');
   if(!card)return;
-  if(!INBOX.length){ card.classList.add('hide'); return; }
-  card.classList.remove('hide');
-  const t=todayStr(), y=iso(addDays(new Date(),-1));
-  document.getElementById('inboxWhen').textContent='（'+INBOX.length+'件・押すまで記録にならない）';
-  rows.innerHTML=INBOX.map(it=>{
-    const col=catColor(it.cats[0]), ic=catIcon(it.cats[0]);
-    const d=it.date===t?'今日':(it.date===y?'きのう':it.date.slice(5).replace('-','/'));
-    return `<div class="ibrow">
-      <span class="ibt">${d} ${it.start}–${it.end}</span>
-      <span class="ibh" style="color:${col}">${it.hours.toFixed(2).replace(/0$/,'')}h</span>
-      <button class="ibtag${it.guess?' guess':''}" style="color:${col}" onclick="inboxTag('${it.id}')">${it.guess?'❓':ic} ${it.cats[0]}</button>
-      <span class="ibname" title="${(it.memo||'').replace(/"/g,'')}">${it.title||''}</span>
-      <button class="ibok" onclick="inboxOk('${it.id}')" title="記録に入れる">○</button>
-      <button class="ibng" onclick="inboxNg('${it.id}')" title="いらない">✕</button>
-    </div>`;
+  const mine=INBOX.filter(it=>it.date===selDate), rest=INBOX.filter(it=>it.date!==selDate);
+  card.classList.toggle('hide',!mine.length);
+  document.getElementById('inboxWhen').textContent='（'+dayName(selDate)+'・'+mine.length+'件・押すまで記録にならない）';
+  rows.innerHTML=mine.map(it=>ibRow(it,false)).join('');
+  const oc=document.getElementById('inboxOther');
+  oc.classList.toggle('hide',!rest.length);
+  if(!rest.length)return;
+  document.getElementById('inboxOtherSum').textContent='🗂 ほかの日の下書き（'+rest.length+'件）';
+  const days=[...new Set(rest.map(it=>it.date))].sort().reverse();
+  document.getElementById('inboxOtherRows').innerHTML=days.map(d=>{
+    const its=rest.filter(it=>it.date===d), h=its.reduce((a,x)=>a+x.hours,0);
+    return `<div style="display:flex;align-items:center;gap:10px;margin:12px 0 2px">
+        <b style="color:var(--cyan)">${dayName(d)}</b><span style="color:var(--dim);font-size:12px">${its.length}件・${h.toFixed(1)}h</span>
+        <button class="ibRe" style="margin-left:auto" onclick="inboxGo('${d}')">この日をひらく</button></div>`
+      +its.map(it=>ibRow(it,false)).join('');
   }).join('');
 }
 /* タグが違っていたら、名前をタップで次のタグへ送る */
@@ -904,10 +925,11 @@ function inboxNg(id){
   INBOX=INBOX.filter(x=>x.id!==id); renderInbox();
 }
 function inboxAll(){
-  if(!INBOX.length)return;
-  const h=INBOX.reduce((a,x)=>a+x.hours,0);
-  if(!confirm(INBOX.length+'件（合計 '+h.toFixed(1)+'h）をぜんぶ記録にする？'))return;
-  INBOX.slice().forEach(it=>inboxOk(it.id));
+  const mine=INBOX.filter(it=>it.date===selDate);
+  if(!mine.length)return;
+  const h=mine.reduce((a,x)=>a+x.hours,0);
+  if(!confirm(dayName(selDate)+'の'+mine.length+'件（合計 '+h.toFixed(1)+'h）をぜんぶ記録にする？'))return;
+  mine.forEach(it=>inboxOk(it.id));
   toast('ぜんぶ入れた');
 }
 
